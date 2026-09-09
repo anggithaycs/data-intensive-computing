@@ -1,0 +1,14 @@
+.venv/
+.ruff_cache/
+__pycache__/
+*.pyc
+.test-output/
+artifacts/
+spark-warehouse/
+*.log
+/storage/
+tmp/
+data/
+/scripts/explore/
+/scripts/build*
+/scripts/render*

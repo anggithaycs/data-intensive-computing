@@ -1,0 +1,322 @@
+platform:
+  version: 2.0.0
+spark:
+  app_name: UrbanDataPlatform_Week1
+  master: local[*]
+  driver_memory: 8g
+  shuffle_partitions: 8
+paths:
+  metadata_path: storage/delta/metadata/ingestion_runs
+  metrics_path: storage/metrics/week1_benchmark_metrics.json
+  benchmark_report: reports/week1/benchmark_report.md
+datasets:
+  taxi_trips:
+    format: parquet
+    source_path: data/yellow_tripdata_2024-*.parquet
+    bronze_path: storage/delta/bronze/raw_taxi_trips
+    silver_path: storage/delta/silver/clean_taxi_trips
+    quarantine_path: storage/delta/quarantine/taxi_trips
+    timezone: America/New_York
+    partition_cols:
+    - pickup_year
+    - pickup_month
+    required_columns:
+    - VendorID
+    - tpep_pickup_datetime
+    - tpep_dropoff_datetime
+    - passenger_count
+    - PULocationID
+    - DOLocationID
+    - trip_distance
+    - fare_amount
+    - total_amount
+    - tip_amount
+    - tolls_amount
+    rename:
+      VendorID: vendor_id
+      tpep_pickup_datetime: pickup_datetime
+      tpep_dropoff_datetime: dropoff_datetime
+      passenger_count: passenger_count
+      trip_distance: trip_distance
+      RatecodeID: rate_code_id
+      store_and_fwd_flag: store_and_fwd_flag
+      PULocationID: pickup_location_id
+      DOLocationID: dropoff_location_id
+      payment_type: payment_type
+      fare_amount: fare_amount
+      extra: extra
+      mta_tax: mta_tax
+      tip_amount: tip_amount
+      tolls_amount: tolls_amount
+      improvement_surcharge: improvement_surcharge
+      total_amount: total_amount
+      congestion_surcharge: congestion_surcharge
+      Airport_fee: airport_fee
+    casts:
+      trip_distance: double
+      fare_amount: double
+      total_amount: double
+      tip_amount: double
+      tolls_amount: double
+      vendor_id: int
+      passenger_count: int
+      pickup_location_id: int
+      dropoff_location_id: int
+    column_defaults:
+      passenger_count: 1
+      tip_amount: 0.0
+      tolls_amount: 0.0
+    key:
+    - trip_id
+    quality_rules:
+      min_fare_amount: 0.0
+      max_fare_amount: 5000.0
+      min_trip_distance: 0.0
+      max_trip_distance: 500.0
+      min_passenger_count: 0
+      max_passenger_count: 10
+      valid_year: 2024
+      min_month: 1
+      max_month: 3
+    validation:
+      valid_pickup_time: pickup_datetime IS NOT NULL AND from_utc_timestamp(pickup_datetime, '{source_timezone}')
+        = pickup_local_datetime
+      valid_dropoff_time: dropoff_datetime IS NOT NULL AND from_utc_timestamp(dropoff_datetime, '{source_timezone}')
+        = dropoff_local_datetime
+      valid_duration: trip_duration_minutes > 0.1 AND trip_duration_minutes <= 1440
+      valid_period: year(pickup_local_datetime) = {valid_year} AND month(pickup_local_datetime) BETWEEN {min_month}
+        AND {max_month}
+      valid_fare: fare_amount BETWEEN {min_fare_amount} AND {max_fare_amount}
+      valid_total: total_amount >= 0 AND NOT isnan(total_amount) AND abs(total_amount) <> CAST('Infinity' AS DOUBLE)
+      valid_distance: trip_distance BETWEEN {min_trip_distance} AND {max_trip_distance}
+      valid_passengers: passenger_count BETWEEN {min_passenger_count} AND {max_passenger_count}
+      present_locations: pickup_location_id IS NOT NULL AND dropoff_location_id IS NOT NULL
+      valid_tip_amount: tip_amount >= 0 AND NOT isnan(tip_amount) AND abs(tip_amount) <> CAST('Infinity' AS DOUBLE)
+      valid_tolls_amount: tolls_amount >= 0 AND NOT isnan(tolls_amount) AND abs(tolls_amount) <> CAST('Infinity'
+        AS DOUBLE)
+  weather:
+    format: csv
+    source_path: data/weather.csv
+    bronze_path: storage/delta/bronze/raw_weather
+    silver_path: storage/delta/silver/clean_weather
+    quarantine_path: storage/delta/quarantine/weather
+    timezone: UTC
+    partition_cols: []
+    required_columns:
+    - year
+    - month
+    - day
+    - hour
+    - temp
+    - rhum
+    - prcp
+    - wdir
+    - wspd
+    - pres
+    - cldc
+    - coco
+    rename:
+      year: year
+      month: month
+      day: day
+      hour: hour
+      temp: temperature_c
+      rhum: relative_humidity_pct
+      prcp: precipitation_mm
+      wdir: wind_direction_deg
+      wspd: wind_speed_kmh
+      pres: air_pressure_hpa
+      cldc: cloud_cover_oktas
+      coco: weather_condition_code
+    casts:
+      year: int
+      month: int
+      day: int
+      hour: int
+      temperature_c: double
+      relative_humidity_pct: double
+      precipitation_mm: double
+      wind_direction_deg: int
+      wind_speed_kmh: double
+      air_pressure_hpa: double
+      cloud_cover_oktas: int
+      weather_condition_code: int
+    key:
+    - weather_observation_id
+    quality_rules:
+      valid_year: 2024
+      temp_min_c: -40.0
+      temp_max_c: 60.0
+      rhum_min: 0.0
+      rhum_max: 100.0
+    validation:
+      valid_timestamp: observation_datetime IS NOT NULL
+      valid_calendar: year = {valid_year} AND month BETWEEN 1 AND 12 AND day BETWEEN 1 AND 31 AND hour BETWEEN 0
+        AND 23
+      valid_temperature: temperature_c BETWEEN {temp_min_c} AND {temp_max_c}
+      valid_humidity: relative_humidity_pct BETWEEN {rhum_min} AND {rhum_max}
+      valid_wind: wind_speed_kmh >= 0 AND NOT isnan(wind_speed_kmh) AND abs(wind_speed_kmh) <> CAST('Infinity' AS
+        DOUBLE)
+      valid_precipitation_mm: precipitation_mm IS NULL OR (precipitation_mm >= 0 AND NOT isnan(precipitation_mm)
+        AND abs(precipitation_mm) <> CAST('Infinity' AS DOUBLE))
+      valid_air_pressure_hpa: air_pressure_hpa IS NULL OR (air_pressure_hpa > 0 AND NOT isnan(air_pressure_hpa)
+        AND abs(air_pressure_hpa) <> CAST('Infinity' AS DOUBLE))
+      valid_cloud_cover: cloud_cover_oktas IS NULL OR cloud_cover_oktas BETWEEN 0 AND 8
+      valid_weather_code: weather_condition_code IS NULL OR weather_condition_code BETWEEN 1 AND 27
+    selected_columns:
+    - weather_observation_id
+    - observation_datetime
+    - observation_date
+    - year
+    - month
+    - day
+    - hour
+    - temperature_c
+    - relative_humidity_pct
+    - precipitation_mm
+    - wind_speed_kmh
+    - air_pressure_hpa
+    - cloud_cover_oktas
+    - weather_condition_code
+  air_quality:
+    format: csv
+    source_path: data/hourly_88101_2024.csv
+    bronze_path: storage/delta/bronze/raw_air_quality
+    silver_path: storage/delta/silver/clean_air_quality
+    quarantine_path: storage/delta/quarantine/air_quality
+    timezone: UTC
+    partition_cols: []
+    required_columns:
+    - State Code
+    - County Code
+    - Site Num
+    - Parameter Code
+    - POC
+    - Latitude
+    - Longitude
+    - Parameter Name
+    - Date Local
+    - Time Local
+    - Date GMT
+    - Time GMT
+    - Sample Measurement
+    - Units of Measure
+    - State Name
+    - County Name
+    rename:
+      State Code: state_code
+      County Code: county_code
+      Site Num: site_number
+      Parameter Code: parameter_code
+      POC: poc
+      Latitude: latitude
+      Longitude: longitude
+      Parameter Name: parameter_name
+      Date Local: date_local
+      Time Local: time_local
+      Date GMT: date_gmt
+      Time GMT: time_gmt
+      Sample Measurement: sample_measurement_pm25
+      Units of Measure: units_of_measure
+      State Name: state_name
+      County Name: county_name
+    casts:
+      state_code: int
+      county_code: int
+      site_number: int
+      parameter_code: int
+      poc: int
+      latitude: double
+      longitude: double
+      parameter_name: string
+      date_local: string
+      time_local: string
+      date_gmt: string
+      time_gmt: string
+      sample_measurement_pm25: double
+      units_of_measure: string
+      state_name: string
+      county_name: string
+    key:
+    - air_quality_observation_id
+    quality_rules:
+      valid_year: 2024
+      ny_state_code: 36
+      nyc_county_codes:
+      - 5
+      - 47
+      - 61
+      - 81
+      - 85
+      min_pm25: 0.0
+      max_pm25: 1000.0
+    county_borough_mapping:
+      5: Bronx
+      47: Brooklyn
+      61: Manhattan
+      81: Queens
+      85: Staten Island
+    validation:
+      valid_timestamp: observation_datetime IS NOT NULL AND year(observation_datetime) = {valid_year}
+      valid_pm25: sample_measurement_pm25 BETWEEN {min_pm25} AND {max_pm25}
+      present_sensor: borough IS NOT NULL AND state_code IS NOT NULL AND county_code IS NOT NULL AND site_number
+        IS NOT NULL AND poc IS NOT NULL
+    selected_columns:
+    - air_quality_observation_id
+    - observation_datetime
+    - observation_date
+    - observation_hour
+    - borough
+    - county_name
+    - state_code
+    - county_code
+    - site_number
+    - poc
+    - sample_measurement_pm25
+    - units_of_measure
+    - latitude
+    - longitude
+  taxi_zones:
+    format: csv
+    source_path: data/taxi_zone_lookup (1).csv
+    bronze_path: storage/delta/bronze/raw_taxi_zones
+    silver_path: storage/delta/silver/clean_taxi_zones
+    quarantine_path: storage/delta/quarantine/taxi_zones
+    timezone: UTC
+    partition_cols: []
+    required_columns:
+    - LocationID
+    - Borough
+    - Zone
+    - service_zone
+    rename:
+      LocationID: location_id
+      Borough: borough
+      Zone: zone
+      service_zone: service_zone
+    casts:
+      location_id: int
+      borough: string
+      zone: string
+      service_zone: string
+    key:
+    - location_id
+    quality_rules: {}
+    validation:
+      valid_borough: borough IS NOT NULL AND length(trim(borough)) > 0
+    selected_columns:
+    - location_id
+    - borough
+    - zone
+    - service_zone
+integration:
+  output_path: storage/delta/silver/integrated_taxi_trips
+  partition_cols:
+  - pickup_year
+  - pickup_month
+benchmark:
+  iterations: 5
+  storage_paths:
+    strategy_a_unpartitioned: storage/delta/benchmark/strategy_a_unpartitioned
+    strategy_b_partitioned: storage/delta/benchmark/strategy_b_partitioned
+    strategy_c_monthly_partitioned: storage/delta/benchmark/strategy_c_monthly_partitioned

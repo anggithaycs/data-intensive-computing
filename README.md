@@ -1,10 +1,10 @@
 # Week 1 Urban Data Integration Platform
 
-Spark ingestion, validation, Delta storage, taxi enrichment, and storage benchmarks for the four Week 1 datasets.
+This project implements the Week 1 urban data platform in Apache Spark and Delta Lake. It ingests and validates four datasets, combines accepted taxi trips with location, weather and air-quality information, and benchmarks three storage layouts.
 
 ## Setup and execution
 
-Use Python 3.10-3.12, Java 17 or 21, and the pinned runtime dependencies:
+The platform requires Python 3.10–3.12 and Java 17 or 21. From the project root, create a virtual environment, install the pinned runtime dependencies, and set the Java and Python paths before running the pipeline:
 
 ```powershell
 python -m venv .venv
@@ -14,49 +14,49 @@ $env:PYSPARK_PYTHON = (Resolve-Path .venv/Scripts/python.exe).Path
 .venv/Scripts/python.exe scripts/run_week1.py
 ```
 
-Run from the project root. Windows needs compatible `winutils.exe` and `hadoop.dll` under `HADOOP_HOME/bin`; the session factory detects `C:/hadoop` when present. The first Spark run needs network access to resolve Delta JVM dependencies. Keep Java's user dependency cache writable.
+On Windows, Spark also needs compatible `winutils.exe` and `hadoop.dll` files in `HADOOP_HOME/bin`. The session factory detects `C:/hadoop` automatically when it exists. The first run needs network access to download the Delta JVM dependencies, and Java must be able to write to its user dependency cache.
 
-Place Q1 2024 yellow taxi Parquet, `weather.csv`, `hourly_88101_2024.csv`, and `taxi_zone_lookup (1).csv` in `data/`, using the assignment download links. Dataset paths are specified in `config/platform_config.yaml`; relative paths resolve against the project root in the CLI.
+Download the Q1 2024 yellow taxi Parquet files, `weather.csv`, `hourly_88101_2024.csv`, and `taxi_zone_lookup (1).csv` using the assignment links, then place them in `data/`. Their paths are defined in `config/platform_config.yaml`. The command-line runner resolves relative paths from the project root.
 
-The default run ingests all four sources, integrates them, benchmarks three taxi layouts, saves JSON metrics, and regenerates `reports/week1/benchmark_report.md`. For an ingestion/integration rebuild without benchmarking:
+The default command ingests all four sources, builds the integrated taxi table, and benchmarks three taxi storage layouts. It also saves the measurements as JSON and regenerates `reports/week1/benchmark_report.md`. To rebuild the ingested and integrated tables without running the benchmark, use:
 
 ```powershell
 .venv/Scripts/python.exe scripts/run_week1.py --skip-benchmark
 ```
 
-Both commands rebuild Bronze/Silver snapshots. A full benchmark uses fresh layout directories. Defaults are `local[*]`, requested `8g` driver memory, eight shuffle/writer partitions and five measured query repetitions. Allow additional memory and disk space for source materialization, quarantine, integrated output and benchmark copies.
+Both commands replace the Bronze and Silver snapshots. A full benchmark writes its layouts into fresh directories so files from previous runs do not affect the measurements. By default, Spark uses `local[*]`, requests `8g` of driver memory, and uses eight shuffle/writer partitions. Each benchmark query has five measured repetitions. Allow enough memory and disk space for the materialized source data, quarantined rows, integrated output and benchmark copies.
 
 ## Code organization
 
-- `src/common`: configuration validation, logging, and Spark session setup.
-- `src/ingestion`: shared read/prepare/classify/publish lifecycle and four domain transformations.
-- `src/integration`: endpoint zone, weather and air joins plus trip-identity verification.
-- `src/storage`: independent raw-input storage experiments and query measurements.
-- `scripts`: platform orchestration and report generation.
-- `tests`: fast configuration/orchestration tests, isolated Spark fixtures, and post-run acceptance checks.
-- `reports/week1`: canonical editable submission sources and generated PDFs/diagram.
+The source code follows the processing stages. `src/common` validates configuration, sets up logging and creates Spark sessions. `src/ingestion` implements the shared read, prepare, classify and publish lifecycle, together with the four domain transformations. `src/integration` joins zone, weather and air-quality context and verifies trip identity. `src/storage` runs independent experiments from raw input and measures query performance.
+
+The `scripts` directory contains orchestration and report-generation entry points. The `tests` directory holds fast configuration and orchestration checks, isolated Spark fixtures and post-run acceptance checks. Editable submission sources and existing PDF and diagram exports are in `reports/week1`.
 
 ## Configuration and contracts
 
-Each dataset has explicit source/output paths, format, required source columns, rename/cast mappings, keys, SQL validity rules, quality thresholds, timezone and partitions. Cast keys use standardized required source names. `selected_columns` defines the clean weather/air/zone schema after validation; it never silently skips missing requested fields. Domain transforms remain Python code.
+Each dataset specification defines its source and output paths, file format, required columns, rename and cast mappings, keys, SQL validity rules, quality thresholds, timezone and partition columns. Cast mappings refer to required source columns by their standardized names. For weather, air quality and zones, `selected_columns` defines the clean output schema after validation; a missing requested column causes an explicit failure. Transformations that depend on the meaning of a dataset remain in Python.
 
-`datasets.weather.timezone` defaults to UTC as an assumption because the CSV has no timezone declaration; confirm its export settings. Rule placeholders resolve from dataset `quality_rules`, with `{source_timezone}` supplied by the dataset's `timezone`. `paths.metadata_path` is the ingestion audit destination. Empty `partition_cols: []` means unpartitioned, including integration.
+The weather CSV does not declare its timezone, so `datasets.weather.timezone` defaults to UTC. This assumption should be checked against the export settings. Validation-rule placeholders obtain their values from the dataset’s `quality_rules`, except `{source_timezone}`, which comes from its `timezone`. The shared ingestion audit is written to `paths.metadata_path`. Setting `partition_cols: []` leaves a table unpartitioned, including the integrated table.
 
-The runner validates configuration before starting Spark, then resolves all source, rule, output and integration schemas before writing any table. Unsupported dataset names, missing Week 1 sources, invalid placeholders, missing casts/output columns and invalid partition columns fail explicitly. Data errors discovered while reading or executing can still fail later; commits are per table, not platform-wide.
+Before starting Spark, the runner validates the configuration. It then resolves the source schemas, validation rules, output schemas and integration schema before writing any table. This catches unsupported dataset names, missing Week 1 sources, invalid placeholders, missing casts or output columns, and invalid partition columns early. Errors encountered while reading or executing the data can still occur later. Each table commits separately, so a failed run can leave tables at different refresh stages.
 
-Construct ingestors with an explicit `dataset_spec`, `schema_version` and `metadata_path`. There is no alternate path/threshold keyword API. The spec is copied to prevent caller mutation. A runner execution shares one run ID across its ingestion audit records and JSON summary. Standalone ingestor runs generate their own IDs.
+When constructing an ingestor directly, provide `dataset_spec`, `schema_version` and `metadata_path`; there is no alternate API accepting separate path or threshold keywords. The ingestor copies the specification so later changes by the caller cannot alter it. During a runner execution, ingestion audit records and the JSON summary share one run ID. Standalone ingestor runs generate their own IDs.
 
 ## Output and data semantics
 
-Original files remain unchanged. Bronze preserves source fields with sanitized names and an ingestion timestamp. Clean sources and integrated trips are snapshot Delta tables. Quarantine appends invalid and duplicate rows per dataset, including rejection reasons, run ID, schema version and rejection time. Successful ingestion metadata appends counts, paths, duration and completion time. Duration excludes its final audit write.
+The original input files remain unchanged. Bronze stores source fields with sanitized names and an ingestion timestamp. Silver stores clean source tables and integrated trips as Delta snapshots. Each dataset also has an append-only quarantine table containing invalid and duplicate rows, their rejection reasons, run ID, schema version and rejection time. Successful ingestions append audit records with counts, paths, duration and completion time. The recorded duration excludes the final audit write.
 
-Ingestion materializes raw input and one classified result on disk for reuse by counts and writes. Every successful ingestion checks `initial_records = valid_records + rejected_records + out_of_scope_records`. Rejected counts include duplicates; invalid counts exclude duplicates. Air observations outside NYC are counted separately. Duplicate survivors use deterministic lexicographic payload order; this is a snapshot policy, not correction resolution.
+Ingestion materializes both the raw input and a classified result on disk so counts and writes can reuse the same records. Every successful ingestion verifies `initial_records = valid_records + rejected_records + out_of_scope_records`. Rejected records include duplicates, while the invalid-record count excludes duplicates. Air observations outside NYC are counted separately as out of scope. When valid rows share a key, deterministic lexicographic ordering of their payloads selects the survivor. This removes duplicates within a snapshot but does not resolve later corrections.
 
-Taxi timestamps become UTC instants while local pickup date/year/month/day/hour retain New York meaning. EPA uses GMT fields. Missing passenger counts default to one and missing tips/tolls to zero; malformed casts are still rejected. Total, tips and tolls must be finite and nonnegative. Weather retains null observations; observed precipitation must be finite/nonnegative, pressure finite/positive, cloud cover 0-8 and weather code 1-27. Other configured bounds are in YAML. Blank borough labels are rejected.
+Taxi timestamps are converted to UTC, while pickup date, year, month, day and hour retain their New York calendar meaning. EPA timestamps use the source GMT fields. Missing passenger counts default to one, and missing tips and tolls default to zero. Malformed values still cause rejection even if a later default could replace them. Total amounts, tips and tolls must be finite and nonnegative.
 
-Endpoint context matches the containing UTC hour. Missing labels become `Unknown`; precipitation and pollution remain null when unavailable. `pickup/dropoff_weather_matched`, precipitation-missing flags, and PM2.5 source labels expose coverage. Integration verifies unique, non-null trip IDs and exact input/output ID sets before publication.
+Weather observations can remain null. When present, precipitation must be finite and nonnegative, pressure must be finite and positive, cloud cover must be between 0 and 8, and the weather code must be between 1 and 27. The YAML configuration defines the remaining bounds. Zone records with blank borough labels are rejected.
 
-`pickup_pm25_borough` is the nullable same-hour borough estimate. `pickup_pm25_citywide` is the same-hour mean across available NYC sites, identical across trips within that hour. `pickup_pm25` prefers borough, then citywide; `pickup_pm25_source` identifies that choice. The same fields exist for dropoff. Site identifiers are required so instruments are averaged within sites before equal site weighting. Use citywide values for citywide analysis and borough values with coverage reporting for borough comparisons.
+Integration attaches context to pickup and dropoff using the UTC hour containing each timestamp. Missing location labels become `Unknown`, while unavailable precipitation and pollution measurements remain null. The `pickup_weather_matched` and `dropoff_weather_matched` flags, precipitation-missing flags and PM2.5 source labels expose gaps in coverage. Before publication, integration verifies unique, non-null trip IDs and exactly matching input and output ID sets.
+
+`pickup_pm25_borough` holds the same-hour borough estimate and remains null when local coverage is unavailable. `pickup_pm25_citywide` holds the same-hour mean across available NYC sites, so its value is identical for every trip in that hour. The convenience field `pickup_pm25` prefers the borough estimate, then the citywide estimate; `pickup_pm25_source` records that choice. Equivalent fields describe dropoff conditions.
+
+Site identifiers are required because the calculation first averages instruments within each site, then weights sites equally. Use the citywide series for citywide analysis. For borough comparisons, use the borough series and report its coverage alongside the results.
 
 Read outputs by Delta path, for example:
 
@@ -79,24 +79,24 @@ spark.stop()
 .venv/Scripts/python.exe -m ruff format --check src scripts tests
 ```
 
-The first suite requires no Spark session. Spark fixtures write only under `.test-output/`, including audit records. Run the acceptance suite after a full data run; it reads configured Delta outputs. Install the pinned Ruff development dependency with `pip install -r requirements-dev.txt`; rules live in `pyproject.toml`.
+The configuration suite runs without a Spark session. Spark regression fixtures write only to `.test-output/`, including their audit records. Run the acceptance suite after a full data run because it reads the configured Delta outputs. Before running Ruff, install the pinned development dependencies with `pip install -r requirements-dev.txt`. The lint and formatting rules are in `pyproject.toml`.
 
-JSON summaries are saved as timestamped artifacts and an atomically replaced latest file. Artifact failures cause a failing command exit; an earlier processing exception is preserved. Ingestion-only runs replace latest JSON too, so choose a timestamped successful full run when regenerating a benchmark:
-
-```powershell
-.venv/Scripts/python.exe scripts/render_benchmark_report.py --metrics storage/metrics/<successful-full-run>.json
-```
-
-The renderer requires successful raw-taxi measurements, three layouts and equivalent query results. It uses explicit layout order and the single query-statistics structure. Fresh directories avoid obsolete-file contamination. Warm queries, fixed ingestion order and one ingestion trial per layout limit the conclusions; inspect samples and physical plans in the JSON.
-
-All editable deliverables live in `reports/week1/`. The PDF builder reads those files directly; importing it has no build side effects. It needs ReportLab, pypdf, pdf2image, Pillow and Poppler in a separate artifact environment:
+Each execution saves a timestamped JSON summary and atomically replaces the latest-summary file. An artifact-writing failure causes the command to exit with a failure status; if processing had already failed, the original exception is preserved. Ingestion-only runs also replace the latest summary, so select a timestamped successful full run when regenerating a benchmark report:
 
 ```powershell
-python scripts/build_week1_deliverables.py --metrics storage/metrics/<successful-full-run>.json
+.venv/Scripts/python.exe -m src.storage.report --metrics storage/metrics/<successful-full-run>.json
 ```
 
-Set `POPPLER_BIN` if Poppler is not on PATH. The builder requires an explicitly chosen successful raw-input metrics artifact, regenerates its benchmark source, and copies the JSON into `reports/week1/evidence/`. Rebuild and visually inspect PDFs after editing sources. The Spark runner regenerates benchmark Markdown, not PDFs. The original benchmark report in `evidence/` and `reports/week1_validation.md` are historical; current measurements are identified in the canonical benchmark report.
+The renderer requires successful measurements from raw taxi input, with all three layouts present and equivalent query results. It presents layouts in an explicit order and reads query statistics from a single shared structure. Fresh benchmark directories prevent obsolete files from affecting results. The JSON retains timing samples and physical plans for inspection. Interpret the measurements with their limits in mind: queries run on a warm system, and each layout has only one ingestion trial in a fixed order.
+
+The editable deliverables are in `reports/week1/`. The PDF builder reads these Markdown sources directly and has no build side effects when imported. To rebuild PDFs later, use a separate artifact environment with ReportLab, pypdf, pdf2image, Pillow and Poppler:
+
+```powershell
+python scripts/package_week1.py --metrics storage/metrics/<successful-full-run>.json
+```
+
+Set `POPPLER_BIN` if Poppler is not on `PATH`. The builder requires an explicitly selected successful raw-input metrics artifact. It regenerates the benchmark source and copies the JSON to `reports/week1/evidence/`. Visually inspect any PDFs rebuilt after source edits. The Spark runner itself regenerates only benchmark Markdown. Older benchmark and validation material is historical; consult the canonical benchmark report to identify the measurements currently presented.
 
 ## Next tasks
 
-Week 2 can add SQL queries and analytical Delta products using the current output contract, AQE switch and benchmark result checks. Week 3 requires a correction identity policy (fare/distance changes alter the taxi hash), explicit schema evolution for `humidity`/`aqi`, merge publication and affected-product refresh. Week 4 should reuse preparation and integration with target-specific features and temporal splits. No speculative orchestration or ML framework is needed in Week 1.
+Week 2 can add SQL queries and analytical Delta products using the current output contract, adaptive query execution (AQE) switch and benchmark result checks. Week 3 needs a policy for identifying corrected trips, because changing fare or distance changes the taxi hash. It also needs explicit schema evolution for `humidity` and `aqi`, merge-based publication, and refreshes of affected analytical products. Week 4 can reuse preparation and integration while adding features and temporal splits for each prediction target. These extensions can be introduced when needed without adding speculative orchestration or machine-learning frameworks to Week 1.

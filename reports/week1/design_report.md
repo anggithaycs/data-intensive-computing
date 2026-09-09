@@ -1,188 +1,132 @@
 # Week 1 Urban Data Platform Design Report
 
-The platform integrates four heterogeneous urban datasets into Apache Spark Delta tables using a modular, reusable ingestion engine and domain-specific transformations. Its primary analytical output retains exactly one row per accepted yellow-taxi trip, enriched with prevailing meteorological conditions, ambient particulate matter (PM2.5), and spatial pickup/dropoff zone descriptors.
+The Week 1 platform brings four datasets into a shared Spark and Delta Lake pipeline. It produces one row per accepted taxi trip, with weather, air-quality and location information attached to pickup and dropoff. A common ingestion engine handles the repeated work of reading, validating and storing records, while dataset-specific transformations preserve the meaning of each source. The implementation is a local batch prototype; incremental processing and comprehensive failure monitoring remain future work.
 
-The architecture establishes a formal **Medallion Lakehouse layout**, enforces strict data-quality quarantine policies, eliminates silent data loss, and guarantees mathematical row reconciliation across the integration lifecycle.
+## 1. Data Catalog and Source Profiling
 
----
+| Dataset | Entity and operational key | Join and temporal attributes |
+|---|---|---|
+| Taxi Parquet | One recorded trip; trip_id hashes vendor, UTC endpoints, location IDs, fare and distance | Pickup/dropoff location IDs; containing UTC hour; local pickup calendar |
+| Weather CSV | One source-hour observation; weather_observation_id combines year/month/day/hour | observation_datetime in UTC; source calendar and UTC date |
+| Air quality CSV | One monitor occurrence/hour; air_quality_observation_id hashes state/county/site/POC/time | Derived borough and UTC observation time, date and hour |
+| Zone CSV | One zone reference entry; location_id | Both taxi endpoint location IDs; no temporal source field |
 
-## 1. Data Catalog & Source Profiling
+The sources differ in both content and growth. Taxi records contain categories such as vendor, payment type, rate code and location IDs, and new monthly batches expand the trip fact table. Weather adds observations by hour or source series, with condition code and cloud cover describing categorical conditions. Air-quality data grows with the number of hours, sites and instruments, and includes county, instrument, parameter and unit categories. Zones change only through occasional reference updates. Their CSV contains borough, zone and service-zone labels and identifiers, but no polygon geometries.
 
-The platform ingests data from multiple municipal and federal agencies, each exhibiting distinct file formats, update frequencies, and data dictionaries:
+The source keys also carry assumptions. Taxi data has no guaranteed natural key, so its hash defines which records count as duplicates within a snapshot. Indistinguishable physical trips can collapse, while a correction to fare or distance changes the hash. The weather key assumes a single series and would need a source identifier for multiple stations. The air-quality key assumes the supplied PM2.5 parameter; multiple pollutants would require a broader key and explicit unit validation.
 
-### Operational Data Catalog
+### Observed scope and counts
 
-| Dataset | Format | Primary Entity & Operational Key | Join & Temporal Fields | Key Attributes & Growth Vector |
-| :--- | :--- | :--- | :--- | :--- |
-| **Taxi Trips** | Parquet | Single physical trip.<br>**Key**: `trip_id` (SHA-256 composite hash) | **Join**: `PULocationID`, `DOLocationID`, containing UTC hour.<br>**Temporal**: pickup/dropoff UTC & local. | **Categories**: vendor, payment, rate code.<br>**Growth**: Monthly high-volume streaming accumulation. |
-| **Weather** | CSV | Hourly NYC weather observation.<br>**Key**: `weather_observation_id` (`YYYY_M_D_H`) | **Join**: `observation_datetime` (UTC hour).<br>**Temporal**: UTC timestamp & calendar. | **Categories**: condition codes, cloud cover.<br>**Growth**: Linear temporal growth (24 rows/day). |
-| **Air Quality** | CSV | Hourly monitor PM2.5 reading.<br>**Key**: `air_observation_id` (Monitor + Time hash) | **Join**: `observation_datetime` (UTC hour), `borough`.<br>**Temporal**: UTC timestamp from GMT. | **Categories**: county, borough, instrument, units.<br>**Growth**: Hours × monitoring sites × parameters. |
-| **Taxi Zones** | CSV | Geographic taxi zone reference.<br>**Key**: `location_id` (Integer 1–265) | **Join**: `location_id` matches trip PU/DO IDs.<br>**Temporal**: Static reference lookup. | **Categories**: borough, zone, service_zone.<br>**Growth**: Infrequent reference updates / corrections. |
+The documented successful ingestion run, `4b1a2ae8e9a249abba67f2ea6051adb6`, processed Q1 2024 taxi files and full-year context sources. The counts below describe that ingestion. The benchmark report separately identifies the metrics artifact used for its storage comparison.
 
----
+| Dataset | Accepted / input rows | Rejected / out of scope |
+|---|---:|---:|
+| Taxi | 9,394,330 / 9,554,778 | 160,448 / 0 |
+| Weather | 8,784 / 8,784 | 0 / 0 |
+| Air quality | 51,855 / 8,139,551 | 30 / 8,087,666 |
+| Zones | 265 / 265 | 0 / 0 |
 
-### Operational Key Semantics
-- **Yellow Taxi Surrogate Key (`trip_id`)**: Because the raw Parquet records lack natural primary keys (taxi medallions and driver hack licenses were anonymized by the NYC TLC), the platform derives a deterministic SHA-256 hash across seven intrinsic attributes:
-  $$\text{trip\_id} = \text{SHA-256}(\text{vendor\_id} \mathbin{\Vert} \text{pickup} \mathbin{\Vert} \text{dropoff} \mathbin{\Vert} \text{locations} \mathbin{\Vert} \text{fare} \mathbin{\Vert} \text{distance})$$
-  This defines a strict duplicate survivor policy: exactly one occurrence survives into Silver, while duplicate records route to Quarantine.
-- **Hourly Weather Key**: Constructed from `year_month_day_hour`. It guarantees that New York City maintains exactly one meteorological record per hour.
-- **Hourly Air Quality Key**: Hashes `state_code`, `county_code`, `site_number`, `poc`, and `observation_datetime`, uniquely identifying each physical sensor reading.
+<!-- PAGEBREAK -->
 
-### Observed Scope & Input Volumes
-- **Taxi Trips**: Three monthly Parquet files covering January to March 2024 (~9.55M raw records).
-- **Weather**: Full-year 2024 hourly observations containing exactly 8,784 rows ($366\text{ days} \times 24\text{ hours}$).
-- **Air Quality**: National EPA dataset containing 8,139,551 records. The Silver pipeline filters this national scope down to New York State (36) and the five NYC counties, producing ~25,000 highly focused urban readings.
-- **Taxi Zones**: 265 static polygon reference records.
+## 2. Storage Architecture and Table Organization
 
----
+The original CSV and Parquet files remain in `data/`. Each Delta table has a separate directory and transaction log, allowing it to be read directly by path. This local implementation therefore does not require an external catalog. The layers separate source snapshots, clean analytical data, rejected records and operational evidence:
 
-## 2. Storage Architecture & Table Organization
+| Path under storage/delta | Purpose | Publication policy |
+|---|---|---|
+| bronze/raw_* | Four source snapshots, sanitized names and ingestion timestamp | Overwrite; unpartitioned |
+| silver/clean_* | Four typed, validated and deduplicated sources | Overwrite; taxi uses local year/month |
+| silver/integrated_taxi_trips | Taxi facts with endpoint context | Overwrite after identity checks; local year/month |
+| quarantine/<dataset> | Invalid and duplicate records with reasons and run metadata | Append separately per dataset |
+| metadata/ingestion_runs | Successful ingestion statistics and completion time | Append |
+| benchmark/<strategy>/<run_id> | Independent storage-layout experiments | Fresh directory for each execution |
 
-The platform implements an enterprise **Medallion Lakehouse Architecture** deployed on Apache Spark Delta Lake. Every table maintains its own directory, Parquet data files, and ACID transaction log (`_delta_log/`):
+Bronze retains the source fields with sanitized names and an ingestion timestamp; the original file bytes remain in `data/`. Quarantine keeps each dataset separate because rejected records can have different schemas. Audit and rejection tables allow additive schema merging, but incompatible type changes still need an explicit migration policy. Each Delta commit is atomic for one table, so a run does not commit all platform outputs as a single transaction.
 
-```text
-storage/delta/
-├── bronze/                         # Raw Ingestion Layer (Full Source Fidelity)
-│   ├── raw_taxi_trips/
-│   ├── raw_weather/
-│   ├── raw_air_quality/
-│   └── raw_taxi_zones/
-├── silver/                         # Standardized, Validated, & Integrated Layer
-│   ├── clean_taxi_trips/           # Partitioned by (pickup_year, pickup_month)
-│   ├── clean_weather/              # Unpartitioned hourly lookup
-│   ├── clean_air_quality/          # Unpartitioned NYC scoped lookup
-│   ├── clean_taxi_zones/           # Unpartitioned spatial dimension
-│   └── integrated_taxi_trips/      # Partitioned master analytical fact table
-├── quarantine/                     # Data Quality Audit Layer (Append-only)
-│   ├── taxi_trips/                 # Tagged with _rejection_reason & _validation_errors
-│   ├── weather/
-│   ├── air_quality/
-│   └── taxi_zones/
-├── metadata/                       # Operational Governance
-│   └── ingestion_runs/             # Audit log of row counts, run IDs, durations
-└── benchmark/                      # Task 6 Storage Experiments
-    ├── strategy_a_unpartitioned/
-    ├── strategy_b_partitioned/
-    └── strategy_c_monthly_partitioned/
-```
+### Partitioning and lookup roles
 
-### Table Organization & Storage Policy
+Clean and integrated taxi tables use `pickup_year` and `pickup_month` from New York local time as partition columns. Weather, NYC air quality and zones remain unpartitioned because they are small lookup inputs. Zone labels provide a spatial dimension. Weather observations and borough-hour or citywide-hour air aggregates provide temporal context, while the underlying monitor readings remain observation facts. An empty partition list disables partitioning for any configured output, including integration.
 
-| Layer | Directory Path | Write Policy | Partitioning | Architectural Responsibility |
-| :--- | :--- | :--- | :--- | :--- |
-| **Bronze** | `storage/delta/bronze/raw_*` | Overwrite | None | Preserves raw source fidelity with sanitized column names and `_ingestion_timestamp`. Enables replayability. |
-| **Silver (Clean)** | `storage/delta/silver/clean_*` | Overwrite | Taxi: `pickup_year`, `pickup_month`<br>Others: None | Validated, typed, deduplicated single-source tables serving as domain analytical foundations. |
-| **Silver (Integrated)** | `storage/delta/silver/integrated_taxi_trips` | Overwrite | `pickup_year`, `pickup_month` | Contextually enriched master analytical fact table joining trips with weather, air, and zones. |
-| **Quarantine** | `storage/delta/quarantine/<dataset>` | Append | None | Captures all rejected rows with `_validation_errors`, `_rejection_reason`, `_run_id`, and `_rejected_at`. |
-| **Metadata** | `storage/delta/metadata/ingestion_runs` | Append | None | Audit log tracking pipeline durations, row reconciliation counts, and schema versions. |
-| **Benchmark** | `storage/delta/benchmark/<strategy>/<run_id>` | Isolated | Strategy-dependent | Dedicated experiment directories isolating storage layout benchmarks from production data. |
+Directory partitioning determines how data is organized on disk, while writer parallelism determines how Spark distributes the write work. Before writing the integrated table, Spark redistributes records across the configured number of shuffle partitions. Neither the directory layout nor the partition-column choice guarantees a particular file size. Keys with many distinct values, sparsely populated partitions, skew and queries without useful partition filters can all make partitioning less effective.
 
----
+### Scaling to twenty times the volume
 
-### Partitioning Strategy & Lookup Roles
-- **Taxi Partitioning**: Partitioned by `pickup_year` and `pickup_month` (derived from New York local wall-clock pickup time). With ~3M trips per month, this layout yields ~100–150 MB Parquet part-files, which perfectly aligns with HDFS/cloud block sizes.
-- **Unpartitioned Tables Rationale**: Weather (8,784 rows), cleaned air quality (~25,000 rows), and taxi zones (265 rows) remain strictly unpartitioned. Partitioning tiny tables produces the classic "small-files problem", inflating file-system metadata and I/O overhead. Keeping them unpartitioned allows Spark to perform instant in-memory Broadcast Joins with zero shuffle network cost.
-- **Conceptual Lookups**: Taxi zones are a spatial dimension; weather and borough/citywide air quality aggregates serve as temporal-spatial lookups during integration, while raw monitor readings are observation facts.
+A twentyfold increase could mean many more trips each day or a much longer date range. Those scenarios should be evaluated separately by re-measuring daily and monthly layouts, selective queries, writer parallelism, file sizes and compaction. Expansion to more cities may also require regional organization and a different broadcast strategy. Shared object storage, a catalog and incremental scheduling are possible future extensions. The current work does not include an experiment at twenty times the volume.
 
-### Scaling Considerations (20× Volume Growth)
-If municipal trip volume expands twentyfold (from 3M to 60M trips/month, ~3 GB/month):
-1. **Shift to Daily Partitioning**: Sub-partitioning by `pickup_date` (or `pickup_year`/`pickup_month`/`pickup_day`) maintains optimal ~128–256 MB file sizes.
-2. **Liquid Clustering / Z-Ordering**: Apply Delta Z-Ordering by `(pickup_location_id, pickup_datetime)` to optimize multi-dimensional filtering.
-3. **Air Quality Sensor Scaling**: If monitor networks expand nationwide (160M+ rows), partition by `state_code` and `observation_year`.
-4. **Auto-Compaction**: Enable Delta `autoCompact` and `targetFileSize` controls to eliminate small-file fragmentation.
+<!-- PAGEBREAK -->
 
----
+## 3. Common Data Model and Quality Rules
 
-## 3. Common Data Model & Quality Rules
+All timestamps used for joins are Spark `TimestampType` values in a UTC session. They can be exchanged in the form `YYYY-MM-DDTHH:mm:ssZ`. Taxi wall-clock values are retained in `pickup_local_datetime` and `dropoff_local_datetime`, while the join timestamps are converted from `America/New_York` to UTC. Pickup date, year, month, day and hour retain local calendar meaning.
 
-To enable unified cross-domain queries, the platform establishes consistent data types, strict timestamp standards, and an automated data-quality validation engine.
+EPA observations use `Date GMT` and `Time GMT`, avoiding confusion between standard-time source fields and daylight-saving time. The weather CSV does not declare its timezone, so UTC is a configured assumption that must be confirmed from the export settings.
 
-### Semantic Normalization & Typing Standards
-- **Canonical Timestamp Standard**: All temporal join instants are converted to UTC `TimestampType` (formatted as ISO-8601: `YYYY-MM-DDTHH:mm:ssZ`). Source timestamps in `America/New_York` are converted to UTC, while retaining `pickup_local_datetime` and local calendar keys for diurnal analytics.
-- **Attribute Naming**: Consistent lower `snake_case` with physical unit suffixes (e.g. `temperature_c`, `wind_speed_kmh`, `precipitation_mm`, `trip_duration_minutes`).
-- **Precision**: Monetary values and environmental measurements use `DoubleType` for analytical throughput; counts and foreign keys use `IntegerType`/`LongType`.
+Columns use lowercase `snake_case`, with unit suffixes where defined. Configured identifiers and calendar fields are integers; measurements and monetary values are doubles; dates use `DateType`; labels and hash IDs are strings; and match flags are booleans. Taxi attributes without configured casts retain their source types. Doubles are suitable for this analytical prototype, while exact monetary accounting would require an explicit decimal policy.
 
-### Missing Value Policies & Explicit Defaults
-- **Business Defaults**: In Taxi Trips, null `passenger_count` defaults to 1; null `tip_amount` and `tolls_amount` default to 0.0.
-- **Missing Spatial Lookups**: Unmatched pickup/dropoff locations map to `"Unknown"` rather than dropping the trip fact.
-- **Contextual Measurements**: Missing weather and precipitation remain `NULL`; no synthetic values are fabricated. Match flags (`pickup_weather_matched = false`) and source indicators (`pickup_pm25_source = 'missing'`) preserve analytical transparency.
-- **Air Quality Dual Estimates**: `pickup_pm25_borough` stores the local borough-hour mean; `pickup_pm25_citywide` stores the available-site city mean.
+### Missing values and validation
 
----
+A missing taxi passenger count defaults to one, and missing tips or tolls default to zero. These assumptions can affect aggregates and should be considered during analysis. Malformed non-null values still cause rejection, even when a later default could replace them. Missing weather, precipitation and pollution measurements remain null. An unmatched zone label becomes `Unknown`, allowing the trip to remain in the output.
 
-### Data Quality Rules & Boundary Thresholds
+| Domain | Current acceptance conditions |
+|---|---|
+| Taxi | Valid UTC/local round-trip timestamps; rounded duration above 0.1 and at most 1,440 minutes; Q1 2024 pickup; fare 0-5,000, distance 0-500, passengers 0-10; finite nonnegative total/tips/tolls; present endpoint IDs |
+| Weather | Parseable 2024 calendar; temperature -40 to 60, humidity 0-100; finite nonnegative wind and observed precipitation; finite positive observed pressure; cloud cover 0-8 and condition code 1-27 when present |
+| Air | UTC year 2024; PM2.5 0-1,000; present monitor and borough fields after NYC scope filtering |
+| Zones | Non-null location key and nonblank borough |
+| All | Configured casts succeed; configured keys are non-null; one deterministic valid survivor per duplicate key |
 
-| Domain | Rule Name | Validation Predicate / Boundary Condition | Rejection Handling |
-| :--- | :--- | :--- | :--- |
-| **Taxi** | `valid_pickup/dropoff` | Round-trip timezone conversion preserves wall-clock equality | Rejects non-existent spring DST hours. |
-| **Taxi** | `valid_duration` | `trip_duration_minutes > 0.1 AND trip_duration_minutes <= 1440` | Quarantines zero, negative, or >24h trips. |
-| **Taxi** | `valid_period` | `year(pickup_local) = 2024 AND month(pickup_local) BETWEEN 1 AND 3` | Quarantines out-of-scope years (e.g. 2002). |
-| **Taxi** | `valid_financials` | `fare BETWEEN 0 AND 5000; total >= 0; distance BETWEEN 0 AND 500` | Quarantines negative fares and anomalies. |
-| **Weather** | `valid_meteorology` | `temp_c BETWEEN -40 AND 60; rhum BETWEEN 0 AND 100; wspd >= 0` | Rejects physically impossible weather values. |
-| **Air Quality** | `valid_air_quality` | `year = 2024 AND pm25 BETWEEN 0.0 AND 1000.0` | Quarantines out-of-range sensor readings. |
-| **All** | `schema & identity` | Mandatory keys non-null; type casts successful; duplicate rank = 1 | Quarantines cast errors & duplicate keys. |
+These checks cover the configured contract, but they do not enforce every reference relationship, optional attribute or concentration unit. For example, taxi records with unknown location references survive with `Unknown` labels. The configuration contains the full mappings, casts, thresholds and clean-column projections, while [task_answers.md](task_answers.md) explains the main transformations. Schema changes should update both these contracts and the focused test fixtures.
 
----
+<!-- PAGEBREAK -->
 
-## 4. Reusable Ingestion Framework & Governance
+## 4. Reusable Ingestion Framework and Governance
 
-The platform implements an object-oriented, template-method ingestion engine centered around `BaseDatasetIngestor`. Platform configuration (`config/platform_config.yaml`) serves as the single source of truth, fully decoupling business logic from execution.
+`BaseDatasetIngestor` handles reading, schema checks, column names and casts, classification, duplicate selection, Delta writes and metadata. Four subclasses supply the domain logic: taxi timestamp, calendar and hash derivation; weather timestamp assembly; EPA geography and GMT handling; and zone-label trimming. The registry constructs each ingestor from an explicit dataset specification, schema version and audit path. There is no alternate constructor API for separate path or threshold arguments.
 
-### Ingestion Lifecycle & Deduplication Policy
-1. **Raw Ingestion**: Loads Parquet or CSV. Raw CSV is loaded as strings with `FAILFAST` parsing to catch malformed files.
-2. **Bronze Persistence**: Persists raw files to Delta Lake with sanitized column names and ingestion timestamps.
-3. **Safe Casting**: Executes `try_cast()` against configured target types, capturing failures in `_cast_errors` rather than crashing.
-4. **Scope & Transforms**: Applies domain transformations (e.g. NYC county filtering, timestamp parsing).
-5. **Quality Classification**: Evaluates named SQL expressions declared in configuration, tagging failures in `_validation_errors`.
-6. **Deterministic Snapshot Deduplication**: Rows are partitioned by primary key and ranked lexicographically by full-row JSON payload:
-   ```python
-   Window.partitionBy(*keys, size("_validation_errors") == 0).orderBy(to_json(struct(*sorted_columns)))
-   ```
-   Rank 1 survives to Silver; Rank > 1 routes to Quarantine under `duplicate_key`. This guarantees that an invalid duplicate row cannot displace a valid row.
-7. **Silver & Quarantine Routing**: Valid rows overwrite Silver; rejected rows append to Quarantine with full error diagnostics.
+### Execution lifecycle
 
-### Mathematical Row Reconciliation
-Every ingestion run enforces a mathematical conservation assertion before publishing to Silver:
-$$\text{Initial Raw Records} = \text{Valid Silver Records} + \text{Rejected Quarantine Records} + \text{Out-of-Scope Records}$$
+The runner validates the nested configuration before starting Spark. It then resolves source schemas, rules, output schemas and the integration schema before writing any table. CSV fields are read by header as strings, missing required columns cause explicit failures, and `FAILFAST` parsing rejects structural corruption. Cast mappings must refer to declared source fields by their standardized names. Requested clean-output columns must also exist; they are never silently skipped.
 
-If this condition fails, the pipeline aborts. Successful ingestion runs append audit metrics to `storage/delta/metadata/ingestion_runs`.
+Ingestion first materializes raw rows on disk, then applies scope filtering and domain transformations. It also materializes the classified result so counts and writes can reuse it. Named SQL expressions define validity: a rule that evaluates to false or null rejects the row, and cast errors remain attached even after defaults are applied.
 
----
+Within each key and validity group, rows are ranked lexicographically by their full-row JSON payload. Separating valid and invalid groups prevents an invalid row from displacing a valid duplicate. The ranking selects a deterministic survivor within a snapshot, but does not resolve corrections across snapshots.
+
+The engine classifies records before publishing them. Raw rows overwrite Bronze, rejected rows append to quarantine, and accepted rows are projected to the clean schema before overwriting Silver. Reusing the classified result avoids calculating duplicate rankings separately for every count and write. Its performance benefit depends on the workload.
+
+### Accounting and metadata
+
+Every ingestion verifies `initial_records = valid_records + rejected_records + out_of_scope_records`. Rejected counts include duplicate occurrences, while invalid counts exclude them. Successful audit records contain the source format, counts, duration, schema version, paths, timezone, partition columns, execution ID and completion time. The duration excludes the final metadata write.
+
+A shared runner ID links ingestion stages to the JSON summary. Timestamped summaries are retained, and the latest summary is replaced atomically. A summary or report failure produces a failing command exit, while any earlier processing exception is preserved. Successful Delta audit records do not provide comprehensive failure monitoring. Because publication happens table by table, a data or runtime failure can leave outputs at different refresh stages.
+
+### Maintenance and future datasets
+
+Adding a source requires a specification, registry entry, representative fixtures and any domain transformations it needs. A new file format also requires a reader. The current runner requires the registered Week 1 sources, and new integration relationships must be implemented separately.
+
+Week 2 can reuse the output schema for SQL queries and analytical products. Week 3 needs a correction-identity policy, schema evolution and merge-based publication. Week 4 can build on preparation and integration with features and temporal splits designed for each prediction target.
+
+<!-- PAGEBREAK -->
 
 ## 5. Contextual Integration Pipeline
 
-The integration pipeline (`UrbanDataIntegrationPipeline`) enriches each taxi trip with spatial, meteorological, and environmental context while preserving the exact grain of the taxi fact table (1 row = 1 trip):
+Integration uses broadcast left joins for the small zone and weather lookups, retaining taxi trips even when context is missing. Each endpoint timestamp is truncated to its containing UTC hour and matched to the exact `observation_datetime`. For example, a January pickup at 08:37 in New York matches the 13:00 UTC observation. The pipeline does not search for the nearest hour, interpolate values or carry earlier observations forward.
 
-### Integration Topology & Hierarchical Fallback
-- **Spatial Join**: Broadcast hash joins attach pickup and dropoff borough, zone, and service zone from `clean_taxi_zones`.
-- **Weather Join**: Taxi `pickup_datetime` is truncated to its containing UTC hour (`date_trunc('hour', pickup_datetime)`) and left-joined to `clean_weather` on `observation_datetime`. This maps each trip to the prevailing meteorological state of its start hour.
-- **Air Quality Hierarchical Fallback**: Because monitor availability varies across boroughs, the pipeline executes a two-tier join:
-  1. *Primary Match*: Joins on exact `(UTC hour, pickup_borough)` against borough-aggregated PM2.5 readings.
-  2. *Citywide Fallback*: If a borough has no active reporting station, falls back to the NYC-wide hourly mean across all reporting sites.
-  3. *Lineage Tagging*: `pickup_pm25_source` records whether the measurement originated from `'borough'`, `'citywide'`, or is `'missing'`.
+Air-quality integration first averages collocated instruments within each physical site and UTC hour. It then gives sites equal weight when calculating borough-hour and citywide-hour means. All three site identifiers are required so that multiple instruments at one site do not give it disproportionate influence.
 
-### Strict Identity Preservation Assertions
-To guarantee that joins never introduce Cartesian fanout or silently drop trips, the pipeline runs bi-directional anti-joins:
-```python
-assert source_ids.join(integrated_ids, "trip_id", "left_anti").count() == 0
-assert integrated_ids.join(source_ids, "trip_id", "left_anti").count() == 0
-```
-This mathematically proves 100% preservation of trip identity and total record volume.
+Separate joins retain `pickup_pm25_borough` and `pickup_pm25_citywide`, rounded to two decimal places. The convenience field `pickup_pm25` prefers the borough value, then the citywide value, and remains null if neither is available. `pickup_pm25_source` records its origin. Corresponding dropoff fields use the dropoff timestamp and borough.
 
----
+Weather-match and precipitation-missing flags distinguish absent observations from measured values. Borough PM2.5 estimates remain null without local coverage. The citywide series describes the sites that report in each hour, rather than equal coverage of all five boroughs. The documented ingestion and integration run has 929,709 pickup borough matches and 8,464,621 citywide fallbacks.
+
+Use the citywide series for citywide demand analysis. For borough comparisons, use borough estimates and report coverage alongside the results. Neither series measures exposure along a taxi route or establishes a causal relationship.
+
+Before publication, the source and integrated tables must both have unique, non-null trip IDs. Anti-joins in both directions verify that their ID sets match exactly, detecting dropped, duplicated or substituted IDs. These checks preserve the declared one-row-per-trip-ID structure, but cannot establish whether the hash distinguishes every physical trip. The documented run retained all 9,394,330 accepted trip IDs.
 
 ## 6. Benchmark-Informed Design Tradeoffs
 
-The benchmark engine (`StorageBenchmarkRunner`) evaluated three physical storage strategies directly on the raw taxi facts:
-- **Strategy A (Unpartitioned)**: Single root directory; fastest writes but requires full scans for all queries.
-- **Strategy B (Daily Partitioned)**: Partitioned by `pickup_date` (91 partitions); suffered write amplification but excels at single-day filters.
-- **Strategy C (Monthly Partitioned)**: Partitioned by `pickup_year` and `pickup_month` (3 partitions); achieves the optimal balance between write throughput (~100–150 MB file sizes) and analytical partition pruning.
+`StorageBenchmarkRunner` compares unpartitioned, local-day and local-year/month layouts. Each strategy independently reads and cleans the same raw taxi input, uses the same configured writer count, and writes to a fresh directory. Its ingestion timer includes source reading, schema checks, casts, transformations, materialization, validation, deduplication and the Delta write. Shared Bronze, quarantine and audit writes are excluded.
 
-**Production Recommendation**: Strategy C is selected as the default production layout for Q1 2024 taxi data.
+The three required queries calculate trips per pickup borough, average duration per local day and average fare per pickup borough. Two additional queries filter the data to February 14 and to February. The harness records storage sizes, file counts, raw query samples, summary statistics and `EXPLAIN FORMATTED` plans. It also verifies that all layouts produce equivalent query results.
 
-> [!NOTE]
-> **Summary of Architectural Strengths**:
-> 1. **Complete Data Governance**: Full audit trail via Medallion Bronze, Silver, and Quarantine layers.
-> 2. **Zero Data Loss**: Rejections are quarantined with error tags rather than silently dropped.
-> 3. **Optimized I/O**: Broadcast joins for small context tables; monthly partitions for large transaction facts.
-> 4. **Mathematical Correctness**: Bi-directional anti-joins guarantee 100% trip identity preservation.
+The [benchmark report](benchmark_report.md) is the central numerical comparison, and its packaged JSON identifies the measured run and configuration. Fixed ingestion order, one ingestion trial per layout and warm query repetitions limit the conclusions. Timings alone do not prove partition-pruning effects or establish a universal winner. Monthly partitions remain the current workload-dependent default and should be reassessed against the Week 2 queries.
+
+Sources: assignment_full_text.txt; config/platform_config.yaml; src/ingestion; src/integration/pipeline.py; src/storage; and the selected metrics artifact packaged in evidence/.

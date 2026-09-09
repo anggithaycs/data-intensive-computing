@@ -204,7 +204,7 @@ class BaseDatasetIngestor(ABC):
 
         if "selected_columns" in self.dataset_spec:
             valid = valid.select(*self.dataset_spec["selected_columns"])
-        
+
         return valid, classified.filter(F.col("_rejection_reason").isNotNull())
 
     def apply_data_quality_rules(self, df: DataFrame) -> tuple[DataFrame, DataFrame]:
@@ -230,11 +230,11 @@ class BaseDatasetIngestor(ABC):
         )
 
         writer = df.write.format("delta").mode(mode).option("overwriteSchema", "true")
-        
+
         if self.partition_cols:
             self.logger.info(f"Partitioning by columns: {self.partition_cols}")
             writer = writer.partitionBy(*self.partition_cols)
-        
+
         writer.save(self.delta_output_path)
 
     def run(self, run_id: str | None = None) -> dict[str, Any]:
@@ -261,7 +261,7 @@ class BaseDatasetIngestor(ABC):
                     "duplicates"
                 ),
             ).first()
-            
+
             scoped_count, valid_count, rejected_count, duplicate_count = stats
             out_of_scope_count = initial_count - scoped_count
             if out_of_scope_count < 0 or scoped_count != valid_count + rejected_count:

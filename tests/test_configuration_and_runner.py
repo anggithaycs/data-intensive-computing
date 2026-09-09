@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts import run_week1
-from scripts.render_benchmark_report import render
 from src.common.config import build_ingestors, load_config, validate_config
 from src.integration.pipeline import UrbanDataIntegrationPipeline
+from src.storage.report import render
 
 
 class ConfigurationTests(unittest.TestCase):

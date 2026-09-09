@@ -1,8 +1,6 @@
 # Week 1 Storage Benchmark Report
 
-Generated from `week1_benchmark_metrics_1788945334850314700.json` for schema version 2.0.0.
-Run ID: `7378aaa59cad4b35ac40eb9a75ca9daf`. Accepted taxi rows: 9,394,330.
-Runtime: Python 3.12.14, Spark 4.0.1, Delta 4.0.1.
+This report compares three Delta storage layouts for the same 9,394,330 accepted taxi rows: an unpartitioned table, daily partitions and monthly partitions. The measurements come from `week1_benchmark_metrics_1788945334850314700.json`, using schema version 2.0.0 and run ID `7378aaa59cad4b35ac40eb9a75ca9daf`. The runtime was Python 3.12.14, Spark 4.0.1 and Delta 4.0.1.
 
 ## Storage measurements
 
@@ -14,7 +12,9 @@ Runtime: Python 3.12.14, Spark 4.0.1, Delta 4.0.1.
 
 ## Warm query measurements
 
-Cells show mean ± sample standard deviation in milliseconds.
+The first three queries calculate trips per pickup borough, average trip duration per local day and average fare per pickup borough. Two additional queries restrict the analysis to February 14 and to February, respectively. Every layout uses the same raw taxi input and the same business queries. The benchmark confirmed that all three layouts produced equivalent results.
+
+Each cell shows the mean execution time in milliseconds, followed by the sample standard deviation. These are warm-system measurements, so the variation between repetitions should be considered alongside the mean.
 
 | Query | Unpartitioned | Daily | Monthly |
 |---|---:|---:|---:|
@@ -26,19 +26,12 @@ Cells show mean ± sample standard deviation in milliseconds.
 
 ## Interpretation and limits
 
-Strategy C (Monthly Partitioned) had the shortest measured taxi ingestion; Strategy B (Date Partitioned) used the least directory space.
-Query means must be considered alongside their variability. These repetitions are not independent cold-cache trials,
-and a small difference does not establish a general performance advantage.
+Monthly partitioning (Strategy C) had the shortest measured taxi ingestion time, while daily partitioning (Strategy B) used the least directory space. Daily partitions also had the lowest mean time for the single-day query, and monthly partitions had the lowest mean time for the February query. These results describe this workload and run. Small differences between query means do not establish a general performance advantage.
 
-The three required queries compute trips per pickup borough, average duration per local day, and average fare per pickup borough.
-Two additional queries filter February 14 and February respectively. All layouts use the same raw taxi input and business queries.
-Cross-layout query equivalence checked: True.
+The ingestion timer covers raw Parquet loading, schema checks, casts, transformations, disk materialization, validation, deduplication, redistribution to an equal number of writers, and the Delta write. Each layout performs this work independently. Shared Bronze, quarantine and metadata writes are excluded, so the ingestion times do not represent a complete platform run.
 
-Raw Parquet loading, schema checks, casts, transformations, disk materialization, validation, deduplication, equal writer redistribution and Delta write timed separately for each layout. Shared Bronze, quarantine and metadata writes excluded. One warmup; Spark cache cleared before measured queries, OS cache remains warm. Strategy order rotated per query; ingestion order fixed with one trial per layout.
-Raw timing samples, medians, layout paths, configuration and runtime metadata are retained in the JSON.
-Directory size includes Delta metadata; the field `storage_size_mb` uses MiB (1024² bytes).
-Benchmark runs use fresh subdirectories and preserve older runs. Write order remains fixed, with one measurement per layout.
-Physical plans are saved with query samples. Scan bytes are not measured; timings alone do not isolate compression or pruning effects.
+Each query receives one warmup before its measured repetitions. Spark’s cache is cleared before measured queries, but the operating system cache remains warm. Strategy order rotates between queries to reduce ordering effects. Ingestion uses a fixed order and only one trial per layout, which limits how confidently those timings can be compared. The query repetitions are not independent cold-cache trials.
 
-At 20× scale, distinguish higher trips per day from a longer date range. Re-evaluate partition sizes, writer parallelism,
-and selective-query performance before choosing daily or monthly partitions. Fewer files are not inherently better.
+Each benchmark execution uses fresh subdirectories and preserves older runs. Directory sizes include Delta metadata; although the JSON field is named `storage_size_mb`, its unit is MiB (1024² bytes). The JSON retains raw timing samples, medians, layout paths, configuration, runtime metadata and physical plans. Scan bytes are not measured, so timings alone cannot separate the effects of compression and partition pruning.
+
+Before applying these results to a dataset twenty times larger, establish whether that growth means more trips per day or a longer date range. Those cases can place different demands on the layout. Re-evaluate partition sizes, writer parallelism and selective-query performance before choosing daily or monthly partitions. File count is only one part of that decision; fewer files do not automatically mean better performance.

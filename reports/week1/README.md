@@ -1,11 +1,17 @@
 # Week 1 submission package
 
-Canonical editable sources are `design_report.md`, `task_answers.md` and `benchmark_report.md` in this directory. The Spark runner generates the benchmark source from a successful full-run JSON; the document builder reads these same sources.
+This directory contains the editable Markdown sources for the Week 1 submission, existing PDF exports and supporting evidence. Start with the design report for an explanation of the platform, or use the task answers to follow the assignment question by question.
 
-1. [Design report](design_report.pdf): architecture, catalog, common model and engineering choices.
-2. [Architecture](architecture.pdf): standalone diagram, also available as `architecture.png`.
-3. [Benchmark report](benchmark_report.pdf): measurements and method limits.
-4. [Task answers](task_answers.pdf): every Week 1 task and discussion question.
-5. [Platform README](../../README.md): setup, execution, testing and output semantics.
+| Document | What it covers |
+|---|---|
+| [Design report](design_report.md) | The data catalog, storage architecture, common data model and engineering decisions. |
+| [Architecture guide](architecture.md) | The pipeline diagram and how data moves through the platform. |
+| [Benchmark report](benchmark_report.md) | Storage and query measurements, the method and the limits of the results. |
+| [Task answers](task_answers.md) | Answers to each Week 1 task and its discussion questions. |
+| [Platform README](../../README.md) | Setup, execution, testing and output semantics. |
 
-Rebuild PDFs with `scripts/build_week1_deliverables.py --metrics <successful-full-run.json>` after source changes and visually inspect pagination. The builder regenerates the benchmark source and copies the selected JSON into `evidence/`; the original report there is historical. Runtime storage is ignored by Git, while the selected packaged JSON preserves the reported samples, plans and configuration.
+The existing exports are [design_report.pdf](design_report.pdf), [architecture.pdf](architecture.pdf), [benchmark_report.pdf](benchmark_report.pdf) and [task_answers.pdf](task_answers.pdf). The standalone diagram is also available as [architecture.png](architecture.png). Markdown edits do not automatically update these exports.
+
+The Spark runner generates the benchmark Markdown from a successful full-run JSON artifact. To rebuild the PDFs later, run `scripts/package_week1.py --metrics <successful-full-run.json>` from the project root, then visually inspect the resulting pagination. The builder reads the report sources in this directory, but also regenerates the benchmark source, replacing manual edits to that file.
+
+During packaging, the selected metrics JSON is copied into `evidence/`. This preserves the reported samples, physical plans and configuration even though runtime storage is ignored by Git. Treat older reports as historical evidence and use the run identified in `benchmark_report.md` for the current comparison.

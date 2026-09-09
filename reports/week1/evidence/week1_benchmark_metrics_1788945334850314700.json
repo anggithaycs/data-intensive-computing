@@ -1,0 +1,717 @@
+{
+  "run_id": "4b1a2ae8e9a249abba67f2ea6051adb6",
+  "schema_version": "2.0.0",
+  "status": "success",
+  "runtime": {
+    "python": "3.12.14",
+    "spark": "4.0.1",
+    "delta": "4.0.1",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "configuration": {
+    "platform": {
+      "version": "2.0.0"
+    },
+    "spark": {
+      "app_name": "UrbanDataPlatform_Week1",
+      "master": "local[*]",
+      "driver_memory": "8g",
+      "shuffle_partitions": 8
+    },
+    "paths": {
+      "metadata_path": "storage/delta/metadata/ingestion_runs",
+      "metrics_path": "storage/metrics/week1_benchmark_metrics.json",
+      "benchmark_report": "reports/week1/benchmark_report.md"
+    },
+    "datasets": {
+      "taxi_trips": {
+        "format": "parquet",
+        "source_path": "data/yellow_tripdata_2024-*.parquet",
+        "bronze_path": "storage/delta/bronze/raw_taxi_trips",
+        "silver_path": "storage/delta/silver/clean_taxi_trips",
+        "quarantine_path": "storage/delta/quarantine/taxi_trips",
+        "timezone": "America/New_York",
+        "partition_cols": [
+          "pickup_year",
+          "pickup_month"
+        ],
+        "required_columns": [
+          "VendorID",
+          "tpep_pickup_datetime",
+          "tpep_dropoff_datetime",
+          "passenger_count",
+          "PULocationID",
+          "DOLocationID",
+          "trip_distance",
+          "fare_amount",
+          "total_amount",
+          "tip_amount",
+          "tolls_amount"
+        ],
+        "rename": {
+          "VendorID": "vendor_id",
+          "tpep_pickup_datetime": "pickup_datetime",
+          "tpep_dropoff_datetime": "dropoff_datetime",
+          "passenger_count": "passenger_count",
+          "trip_distance": "trip_distance",
+          "RatecodeID": "rate_code_id",
+          "store_and_fwd_flag": "store_and_fwd_flag",
+          "PULocationID": "pickup_location_id",
+          "DOLocationID": "dropoff_location_id",
+          "payment_type": "payment_type",
+          "fare_amount": "fare_amount",
+          "extra": "extra",
+          "mta_tax": "mta_tax",
+          "tip_amount": "tip_amount",
+          "tolls_amount": "tolls_amount",
+          "improvement_surcharge": "improvement_surcharge",
+          "total_amount": "total_amount",
+          "congestion_surcharge": "congestion_surcharge",
+          "Airport_fee": "airport_fee"
+        },
+        "casts": {
+          "trip_distance": "double",
+          "fare_amount": "double",
+          "total_amount": "double",
+          "tip_amount": "double",
+          "tolls_amount": "double",
+          "vendor_id": "int",
+          "passenger_count": "int",
+          "pickup_location_id": "int",
+          "dropoff_location_id": "int"
+        },
+        "column_defaults": {
+          "passenger_count": 1,
+          "tip_amount": 0.0,
+          "tolls_amount": 0.0
+        },
+        "key": [
+          "trip_id"
+        ],
+        "quality_rules": {
+          "min_fare_amount": 0.0,
+          "max_fare_amount": 5000.0,
+          "min_trip_distance": 0.0,
+          "max_trip_distance": 500.0,
+          "min_passenger_count": 0,
+          "max_passenger_count": 10,
+          "valid_year": 2024,
+          "min_month": 1,
+          "max_month": 3
+        },
+        "validation": {
+          "valid_pickup_time": "pickup_datetime IS NOT NULL AND from_utc_timestamp(pickup_datetime, '{source_timezone}') = pickup_local_datetime",
+          "valid_dropoff_time": "dropoff_datetime IS NOT NULL AND from_utc_timestamp(dropoff_datetime, '{source_timezone}') = dropoff_local_datetime",
+          "valid_duration": "trip_duration_minutes > 0.1 AND trip_duration_minutes <= 1440",
+          "valid_period": "year(pickup_local_datetime) = {valid_year} AND month(pickup_local_datetime) BETWEEN {min_month} AND {max_month}",
+          "valid_fare": "fare_amount BETWEEN {min_fare_amount} AND {max_fare_amount}",
+          "valid_total": "total_amount >= 0 AND NOT isnan(total_amount) AND abs(total_amount) <> CAST('Infinity' AS DOUBLE)",
+          "valid_distance": "trip_distance BETWEEN {min_trip_distance} AND {max_trip_distance}",
+          "valid_passengers": "passenger_count BETWEEN {min_passenger_count} AND {max_passenger_count}",
+          "present_locations": "pickup_location_id IS NOT NULL AND dropoff_location_id IS NOT NULL",
+          "valid_tip_amount": "tip_amount >= 0 AND NOT isnan(tip_amount) AND abs(tip_amount) <> CAST('Infinity' AS DOUBLE)",
+          "valid_tolls_amount": "tolls_amount >= 0 AND NOT isnan(tolls_amount) AND abs(tolls_amount) <> CAST('Infinity' AS DOUBLE)"
+        }
+      },
+      "weather": {
+        "format": "csv",
+        "source_path": "data/weather.csv",
+        "bronze_path": "storage/delta/bronze/raw_weather",
+        "silver_path": "storage/delta/silver/clean_weather",
+        "quarantine_path": "storage/delta/quarantine/weather",
+        "timezone": "UTC",
+        "partition_cols": [],
+        "required_columns": [
+          "year",
+          "month",
+          "day",
+          "hour",
+          "temp",
+          "rhum",
+          "prcp",
+          "wdir",
+          "wspd",
+          "pres",
+          "cldc",
+          "coco"
+        ],
+        "rename": {
+          "year": "year",
+          "month": "month",
+          "day": "day",
+          "hour": "hour",
+          "temp": "temperature_c",
+          "rhum": "relative_humidity_pct",
+          "prcp": "precipitation_mm",
+          "wdir": "wind_direction_deg",
+          "wspd": "wind_speed_kmh",
+          "pres": "air_pressure_hpa",
+          "cldc": "cloud_cover_oktas",
+          "coco": "weather_condition_code"
+        },
+        "casts": {
+          "year": "int",
+          "month": "int",
+          "day": "int",
+          "hour": "int",
+          "temperature_c": "double",
+          "relative_humidity_pct": "double",
+          "precipitation_mm": "double",
+          "wind_direction_deg": "int",
+          "wind_speed_kmh": "double",
+          "air_pressure_hpa": "double",
+          "cloud_cover_oktas": "int",
+          "weather_condition_code": "int"
+        },
+        "key": [
+          "weather_observation_id"
+        ],
+        "quality_rules": {
+          "valid_year": 2024,
+          "temp_min_c": -40.0,
+          "temp_max_c": 60.0,
+          "rhum_min": 0.0,
+          "rhum_max": 100.0
+        },
+        "validation": {
+          "valid_timestamp": "observation_datetime IS NOT NULL",
+          "valid_calendar": "year = {valid_year} AND month BETWEEN 1 AND 12 AND day BETWEEN 1 AND 31 AND hour BETWEEN 0 AND 23",
+          "valid_temperature": "temperature_c BETWEEN {temp_min_c} AND {temp_max_c}",
+          "valid_humidity": "relative_humidity_pct BETWEEN {rhum_min} AND {rhum_max}",
+          "valid_wind": "wind_speed_kmh >= 0 AND NOT isnan(wind_speed_kmh) AND abs(wind_speed_kmh) <> CAST('Infinity' AS DOUBLE)",
+          "valid_precipitation_mm": "precipitation_mm IS NULL OR (precipitation_mm >= 0 AND NOT isnan(precipitation_mm) AND abs(precipitation_mm) <> CAST('Infinity' AS DOUBLE))",
+          "valid_air_pressure_hpa": "air_pressure_hpa IS NULL OR (air_pressure_hpa > 0 AND NOT isnan(air_pressure_hpa) AND abs(air_pressure_hpa) <> CAST('Infinity' AS DOUBLE))",
+          "valid_cloud_cover": "cloud_cover_oktas IS NULL OR cloud_cover_oktas BETWEEN 0 AND 8",
+          "valid_weather_code": "weather_condition_code IS NULL OR weather_condition_code BETWEEN 1 AND 27"
+        },
+        "selected_columns": [
+          "weather_observation_id",
+          "observation_datetime",
+          "observation_date",
+          "year",
+          "month",
+          "day",
+          "hour",
+          "temperature_c",
+          "relative_humidity_pct",
+          "precipitation_mm",
+          "wind_speed_kmh",
+          "air_pressure_hpa",
+          "cloud_cover_oktas",
+          "weather_condition_code"
+        ]
+      },
+      "air_quality": {
+        "format": "csv",
+        "source_path": "data/hourly_88101_2024.csv",
+        "bronze_path": "storage/delta/bronze/raw_air_quality",
+        "silver_path": "storage/delta/silver/clean_air_quality",
+        "quarantine_path": "storage/delta/quarantine/air_quality",
+        "timezone": "UTC",
+        "partition_cols": [],
+        "required_columns": [
+          "State Code",
+          "County Code",
+          "Site Num",
+          "Parameter Code",
+          "POC",
+          "Latitude",
+          "Longitude",
+          "Parameter Name",
+          "Date Local",
+          "Time Local",
+          "Date GMT",
+          "Time GMT",
+          "Sample Measurement",
+          "Units of Measure",
+          "State Name",
+          "County Name"
+        ],
+        "rename": {
+          "State Code": "state_code",
+          "County Code": "county_code",
+          "Site Num": "site_number",
+          "Parameter Code": "parameter_code",
+          "POC": "poc",
+          "Latitude": "latitude",
+          "Longitude": "longitude",
+          "Parameter Name": "parameter_name",
+          "Date Local": "date_local",
+          "Time Local": "time_local",
+          "Date GMT": "date_gmt",
+          "Time GMT": "time_gmt",
+          "Sample Measurement": "sample_measurement_pm25",
+          "Units of Measure": "units_of_measure",
+          "State Name": "state_name",
+          "County Name": "county_name"
+        },
+        "casts": {
+          "state_code": "int",
+          "county_code": "int",
+          "site_number": "int",
+          "parameter_code": "int",
+          "poc": "int",
+          "latitude": "double",
+          "longitude": "double",
+          "parameter_name": "string",
+          "date_local": "string",
+          "time_local": "string",
+          "date_gmt": "string",
+          "time_gmt": "string",
+          "sample_measurement_pm25": "double",
+          "units_of_measure": "string",
+          "state_name": "string",
+          "county_name": "string"
+        },
+        "key": [
+          "air_quality_observation_id"
+        ],
+        "quality_rules": {
+          "valid_year": 2024,
+          "ny_state_code": 36,
+          "nyc_county_codes": [
+            5,
+            47,
+            61,
+            81,
+            85
+          ],
+          "min_pm25": 0.0,
+          "max_pm25": 1000.0
+        },
+        "county_borough_mapping": {
+          "5": "Bronx",
+          "47": "Brooklyn",
+          "61": "Manhattan",
+          "81": "Queens",
+          "85": "Staten Island"
+        },
+        "validation": {
+          "valid_timestamp": "observation_datetime IS NOT NULL AND year(observation_datetime) = {valid_year}",
+          "valid_pm25": "sample_measurement_pm25 BETWEEN {min_pm25} AND {max_pm25}",
+          "present_sensor": "borough IS NOT NULL AND state_code IS NOT NULL AND county_code IS NOT NULL AND site_number IS NOT NULL AND poc IS NOT NULL"
+        },
+        "selected_columns": [
+          "air_quality_observation_id",
+          "observation_datetime",
+          "observation_date",
+          "observation_hour",
+          "borough",
+          "county_name",
+          "state_code",
+          "county_code",
+          "site_number",
+          "poc",
+          "sample_measurement_pm25",
+          "units_of_measure",
+          "latitude",
+          "longitude"
+        ]
+      },
+      "taxi_zones": {
+        "format": "csv",
+        "source_path": "data/taxi_zone_lookup (1).csv",
+        "bronze_path": "storage/delta/bronze/raw_taxi_zones",
+        "silver_path": "storage/delta/silver/clean_taxi_zones",
+        "quarantine_path": "storage/delta/quarantine/taxi_zones",
+        "timezone": "UTC",
+        "partition_cols": [],
+        "required_columns": [
+          "LocationID",
+          "Borough",
+          "Zone",
+          "service_zone"
+        ],
+        "rename": {
+          "LocationID": "location_id",
+          "Borough": "borough",
+          "Zone": "zone",
+          "service_zone": "service_zone"
+        },
+        "casts": {
+          "location_id": "int",
+          "borough": "string",
+          "zone": "string",
+          "service_zone": "string"
+        },
+        "key": [
+          "location_id"
+        ],
+        "quality_rules": {},
+        "validation": {
+          "valid_borough": "borough IS NOT NULL AND length(trim(borough)) > 0"
+        },
+        "selected_columns": [
+          "location_id",
+          "borough",
+          "zone",
+          "service_zone"
+        ]
+      }
+    },
+    "integration": {
+      "output_path": "storage/delta/silver/integrated_taxi_trips",
+      "partition_cols": [
+        "pickup_year",
+        "pickup_month"
+      ]
+    },
+    "benchmark": {
+      "iterations": 5,
+      "storage_paths": {
+        "strategy_a_unpartitioned": "storage/delta/benchmark/strategy_a_unpartitioned",
+        "strategy_b_partitioned": "storage/delta/benchmark/strategy_b_partitioned",
+        "strategy_c_monthly_partitioned": "storage/delta/benchmark/strategy_c_monthly_partitioned"
+      }
+    }
+  },
+  "ingestion": {
+    "taxi_zones": {
+      "dataset_name": "TaxiZones",
+      "file_format": "csv",
+      "schema_version": "2.0.0",
+      "initial_records": 265,
+      "valid_records": 265,
+      "rejected_records": 0,
+      "duplicate_records": 0,
+      "invalid_records": 0,
+      "out_of_scope_records": 0,
+      "run_id": "4b1a2ae8e9a249abba67f2ea6051adb6",
+      "quarantine_path": "storage/delta/quarantine/taxi_zones",
+      "source_timezone": "UTC",
+      "duration_seconds": 9.959,
+      "bronze_output_path": "storage/delta/bronze/raw_taxi_zones",
+      "delta_output_path": "storage/delta/silver/clean_taxi_zones",
+      "partition_columns": []
+    },
+    "weather": {
+      "dataset_name": "Weather",
+      "file_format": "csv",
+      "schema_version": "2.0.0",
+      "initial_records": 8784,
+      "valid_records": 8784,
+      "rejected_records": 0,
+      "duplicate_records": 0,
+      "invalid_records": 0,
+      "out_of_scope_records": 0,
+      "run_id": "4b1a2ae8e9a249abba67f2ea6051adb6",
+      "quarantine_path": "storage/delta/quarantine/weather",
+      "source_timezone": "UTC",
+      "duration_seconds": 6.3,
+      "bronze_output_path": "storage/delta/bronze/raw_weather",
+      "delta_output_path": "storage/delta/silver/clean_weather",
+      "partition_columns": []
+    },
+    "air_quality": {
+      "dataset_name": "AirQuality",
+      "file_format": "csv",
+      "schema_version": "2.0.0",
+      "initial_records": 8139551,
+      "valid_records": 51855,
+      "rejected_records": 30,
+      "duplicate_records": 0,
+      "invalid_records": 30,
+      "out_of_scope_records": 8087666,
+      "run_id": "4b1a2ae8e9a249abba67f2ea6051adb6",
+      "quarantine_path": "storage/delta/quarantine/air_quality",
+      "source_timezone": "UTC",
+      "duration_seconds": 83.744,
+      "bronze_output_path": "storage/delta/bronze/raw_air_quality",
+      "delta_output_path": "storage/delta/silver/clean_air_quality",
+      "partition_columns": []
+    },
+    "taxi_trips": {
+      "dataset_name": "TaxiTrips",
+      "file_format": "parquet",
+      "schema_version": "2.0.0",
+      "initial_records": 9554778,
+      "valid_records": 9394330,
+      "rejected_records": 160448,
+      "duplicate_records": 1,
+      "invalid_records": 160447,
+      "out_of_scope_records": 0,
+      "run_id": "4b1a2ae8e9a249abba67f2ea6051adb6",
+      "quarantine_path": "storage/delta/quarantine/taxi_trips",
+      "source_timezone": "America/New_York",
+      "duration_seconds": 217.298,
+      "bronze_output_path": "storage/delta/bronze/raw_taxi_trips",
+      "delta_output_path": "storage/delta/silver/clean_taxi_trips",
+      "partition_columns": [
+        "pickup_year",
+        "pickup_month"
+      ]
+    }
+  },
+  "integration": {
+    "pipeline_name": "UrbanDataIntegrationPipeline",
+    "output_path": "storage\\delta\\silver\\integrated_taxi_trips",
+    "total_records": 9394330,
+    "duration_seconds": 278.892,
+    "partition_columns": [
+      "pickup_year",
+      "pickup_month"
+    ],
+    "trip_identity_preserved": true,
+    "context_coverage": {
+      "pickup_pm25_borough_rows": 929709,
+      "pickup_pm25_citywide_rows": 8464621,
+      "pickup_pm25_missing_rows": 0,
+      "dropoff_pm25_borough_rows": 839586,
+      "dropoff_pm25_citywide_rows": 8554744,
+      "dropoff_pm25_missing_rows": 0,
+      "pickup_weather_matched_rows": 9394330,
+      "dropoff_weather_matched_rows": 9394330
+    }
+  },
+  "benchmark": {
+    "total_records": 9394330,
+    "storage_metrics": {
+      "Strategy A (Unpartitioned)": {
+        "ingestion_time_sec": 191.05,
+        "source_records": 9554778,
+        "valid_records": 9394330,
+        "rejected_records": 160448,
+        "storage_size_bytes": 1089444629,
+        "storage_size_mb": 1038.98,
+        "data_size_bytes": 1080974153,
+        "num_parquet_files": 4,
+        "num_generated_files": 12,
+        "path": "storage/delta/benchmark/strategy_a_unpartitioned\\7378aaa59cad4b35ac40eb9a75ca9daf"
+      },
+      "Strategy B (Date Partitioned)": {
+        "ingestion_time_sec": 192.817,
+        "source_records": 9554778,
+        "valid_records": 9394330,
+        "rejected_records": 160448,
+        "storage_size_bytes": 966034631,
+        "storage_size_mb": 921.28,
+        "data_size_bytes": 958323583,
+        "num_parquet_files": 91,
+        "num_generated_files": 186,
+        "path": "storage/delta/benchmark/strategy_b_partitioned\\7378aaa59cad4b35ac40eb9a75ca9daf"
+      },
+      "Strategy C (Monthly Partitioned)": {
+        "ingestion_time_sec": 184.841,
+        "source_records": 9554778,
+        "valid_records": 9394330,
+        "rejected_records": 160448,
+        "storage_size_bytes": 1074180697,
+        "storage_size_mb": 1024.42,
+        "data_size_bytes": 1065828857,
+        "num_parquet_files": 4,
+        "num_generated_files": 12,
+        "path": "storage/delta/benchmark/strategy_c_monthly_partitioned\\7378aaa59cad4b35ac40eb9a75ca9daf"
+      }
+    },
+    "query_statistics": {
+      "Strategy A (Unpartitioned)": {
+        "Q1_Trips_Per_Borough": {
+          "mean_ms": 951.48,
+          "median_ms": 948.72,
+          "stdev_ms": 57.76,
+          "samples_ms": [
+            972.4288999568671,
+            866.0457001533359,
+            948.7179999705404,
+            944.2489999346435,
+            1025.9591999929398
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (10)\n+- HashAggregate (9)\n   +- Exchange (8)\n      +- HashAggregate (7)\n         +- Project (6)\n            +- BroadcastHashJoin LeftOuter BuildRight (5)\n               :- Scan parquet  (1)\n               +- BroadcastExchange (4)\n                  +- Filter (3)\n                     +- Scan parquet  (2)\n\n\n(1) Scan parquet \nOutput [1]: [pickup_location_id#64005]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_a_unpartitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<pickup_location_id:int>\n\n(2) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(3) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(4) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=10389]\n\n(5) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#64005]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(6) Project\nOutput [1]: [coalesce(borough#46680, Unknown) AS _groupingexpression#64873]\nInput [3]: [pickup_location_id#64005, location_id#46679, borough#46680]\n\n(7) HashAggregate\nInput [1]: [_groupingexpression#64873]\nKeys [1]: [_groupingexpression#64873]\nFunctions [1]: [partial_count(1)]\nAggregate Attributes [1]: [count#65008L]\nResults [2]: [_groupingexpression#64873, count#65009L]\n\n(8) Exchange\nInput [2]: [_groupingexpression#64873, count#65009L]\nArguments: hashpartitioning(_groupingexpression#64873, 8), ENSURE_REQUIREMENTS, [plan_id=10394]\n\n(9) HashAggregate\nInput [2]: [_groupingexpression#64873, count#65009L]\nKeys [1]: [_groupingexpression#64873]\nFunctions [1]: [count(1)]\nAggregate Attributes [1]: [count(1)#64872L]\nResults [2]: [_groupingexpression#64873 AS pickup_borough#64866, count(1)#64872L AS trip_count#64867L]\n\n(10) AdaptiveSparkPlan\nOutput [2]: [pickup_borough#64866, trip_count#64867L]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q2_Avg_Duration_Per_Day": {
+          "mean_ms": 458.13,
+          "median_ms": 442.49,
+          "stdev_ms": 55.45,
+          "samples_ms": [
+            552.703200140968,
+            456.2762000132352,
+            442.4862000159919,
+            427.8521998785436,
+            411.3174001686275
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (7)\n+- Sort (6)\n   +- Exchange (5)\n      +- HashAggregate (4)\n         +- Exchange (3)\n            +- HashAggregate (2)\n               +- Scan parquet  (1)\n\n\n(1) Scan parquet \nOutput [2]: [pickup_date#68251, trip_duration_minutes#68256]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_a_unpartitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<pickup_date:date,trip_duration_minutes:double>\n\n(2) HashAggregate\nInput [2]: [pickup_date#68251, trip_duration_minutes#68256]\nKeys [1]: [pickup_date#68251]\nFunctions [1]: [partial_avg(trip_duration_minutes#68256)]\nAggregate Attributes [2]: [sum#68824, count#68825L]\nResults [3]: [pickup_date#68251, sum#68826, count#68827L]\n\n(3) Exchange\nInput [3]: [pickup_date#68251, sum#68826, count#68827L]\nArguments: hashpartitioning(pickup_date#68251, 8), ENSURE_REQUIREMENTS, [plan_id=14444]\n\n(4) HashAggregate\nInput [3]: [pickup_date#68251, sum#68826, count#68827L]\nKeys [1]: [pickup_date#68251]\nFunctions [1]: [avg(trip_duration_minutes#68256)]\nAggregate Attributes [1]: [avg(trip_duration_minutes#68256)#68755]\nResults [2]: [pickup_date#68251, avg(trip_duration_minutes#68256)#68755 AS avg_duration#68750]\n\n(5) Exchange\nInput [2]: [pickup_date#68251, avg_duration#68750]\nArguments: rangepartitioning(pickup_date#68251 ASC NULLS FIRST, 8), ENSURE_REQUIREMENTS, [plan_id=14447]\n\n(6) Sort\nInput [2]: [pickup_date#68251, avg_duration#68750]\nArguments: [pickup_date#68251 ASC NULLS FIRST], true, 0\n\n(7) AdaptiveSparkPlan\nOutput [2]: [pickup_date#68251, avg_duration#68750]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q3_Avg_Fare_Per_Borough": {
+          "mean_ms": 822.38,
+          "median_ms": 806.65,
+          "stdev_ms": 88.8,
+          "samples_ms": [
+            927.5299001019448,
+            747.0209999009967,
+            806.6461000125855,
+            900.3697000443935,
+            730.3108999039978
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (10)\n+- HashAggregate (9)\n   +- Exchange (8)\n      +- HashAggregate (7)\n         +- Project (6)\n            +- BroadcastHashJoin LeftOuter BuildRight (5)\n               :- Scan parquet  (1)\n               +- BroadcastExchange (4)\n                  +- Filter (3)\n                     +- Scan parquet  (2)\n\n\n(1) Scan parquet \nOutput [2]: [pickup_location_id#69897, fare_amount#69900]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_a_unpartitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<pickup_location_id:int,fare_amount:double>\n\n(2) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(3) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(4) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=16494]\n\n(5) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#69897]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(6) Project\nOutput [2]: [fare_amount#69900, coalesce(borough#46680, Unknown) AS _groupingexpression#70813]\nInput [4]: [pickup_location_id#69897, fare_amount#69900, location_id#46679, borough#46680]\n\n(7) HashAggregate\nInput [2]: [fare_amount#69900, _groupingexpression#70813]\nKeys [1]: [_groupingexpression#70813]\nFunctions [1]: [partial_avg(fare_amount#69900)]\nAggregate Attributes [2]: [sum#70948, count#70949L]\nResults [3]: [_groupingexpression#70813, sum#70950, count#70951L]\n\n(8) Exchange\nInput [3]: [_groupingexpression#70813, sum#70950, count#70951L]\nArguments: hashpartitioning(_groupingexpression#70813, 8), ENSURE_REQUIREMENTS, [plan_id=16499]\n\n(9) HashAggregate\nInput [3]: [_groupingexpression#70813, sum#70950, count#70951L]\nKeys [1]: [_groupingexpression#70813]\nFunctions [1]: [avg(fare_amount#69900)]\nAggregate Attributes [1]: [avg(fare_amount#69900)#70812]\nResults [2]: [_groupingexpression#70813 AS pickup_borough#70806, avg(fare_amount#69900)#70812 AS avg_fare#70807]\n\n(10) AdaptiveSparkPlan\nOutput [2]: [pickup_borough#70806, avg_fare#70807]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q4_Single_Day_Pruned_Analysis": {
+          "mean_ms": 642.7,
+          "median_ms": 602.42,
+          "stdev_ms": 56.12,
+          "samples_ms": [
+            713.9155000913888,
+            602.4160999804735,
+            601.8913998268545,
+            693.4072999283671,
+            601.8610000610352
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (12)\n+- HashAggregate (11)\n   +- Exchange (10)\n      +- HashAggregate (9)\n         +- Project (8)\n            +- BroadcastHashJoin LeftOuter BuildRight (7)\n               :- Project (3)\n               :  +- Filter (2)\n               :     +- Scan parquet  (1)\n               +- BroadcastExchange (6)\n                  +- Filter (5)\n                     +- Scan parquet  (4)\n\n\n(1) Scan parquet \nOutput [3]: [pickup_location_id#72021, fare_amount#72024, pickup_date#72035]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_a_unpartitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nPushedFilters: [IsNotNull(pickup_date), EqualTo(pickup_date,2024-02-14)]\nReadSchema: struct<pickup_location_id:int,fare_amount:double,pickup_date:date>\n\n(2) Filter\nInput [3]: [pickup_location_id#72021, fare_amount#72024, pickup_date#72035]\nCondition : (isnotnull(pickup_date#72035) AND (pickup_date#72035 = 2024-02-14))\n\n(3) Project\nOutput [2]: [pickup_location_id#72021, fare_amount#72024]\nInput [3]: [pickup_location_id#72021, fare_amount#72024, pickup_date#72035]\n\n(4) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(5) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(6) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=18651]\n\n(7) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#72021]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(8) Project\nOutput [2]: [fare_amount#72024, coalesce(borough#46680, Unknown) AS _groupingexpression#72951]\nInput [4]: [pickup_location_id#72021, fare_amount#72024, location_id#46679, borough#46680]\n\n(9) HashAggregate\nInput [2]: [fare_amount#72024, _groupingexpression#72951]\nKeys [1]: [_groupingexpression#72951]\nFunctions [2]: [partial_count(1), partial_avg(fare_amount#72024)]\nAggregate Attributes [3]: [count#73084L, sum#73085, count#73086L]\nResults [4]: [_groupingexpression#72951, count#73087L, sum#73088, count#73089L]\n\n(10) Exchange\nInput [4]: [_groupingexpression#72951, count#73087L, sum#73088, count#73089L]\nArguments: hashpartitioning(_groupingexpression#72951, 8), ENSURE_REQUIREMENTS, [plan_id=18656]\n\n(11) HashAggregate\nInput [4]: [_groupingexpression#72951, count#73087L, sum#73088, count#73089L]\nKeys [1]: [_groupingexpression#72951]\nFunctions [2]: [count(1), avg(fare_amount#72024)]\nAggregate Attributes [2]: [count(1)#72947L, avg(fare_amount#72024)#72948]\nResults [3]: [_groupingexpression#72951 AS pickup_borough#72942, count(1)#72947L AS count(1)#72949L, avg(fare_amount#72024)#72948 AS avg(fare_amount)#72950]\n\n(12) AdaptiveSparkPlan\nOutput [3]: [pickup_borough#72942, count(1)#72949L, avg(fare_amount)#72950]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q5_Month_Pruned_Analysis": {
+          "mean_ms": 659.08,
+          "median_ms": 632.58,
+          "stdev_ms": 88.83,
+          "samples_ms": [
+            815.3248999733478,
+            599.3190999142826,
+            609.4752999488264,
+            632.579900091514,
+            638.67749995552
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (12)\n+- HashAggregate (11)\n   +- Exchange (10)\n      +- HashAggregate (9)\n         +- Project (8)\n            +- BroadcastHashJoin LeftOuter BuildRight (7)\n               :- Project (3)\n               :  +- Filter (2)\n               :     +- Scan parquet  (1)\n               +- BroadcastExchange (6)\n                  +- Filter (5)\n                     +- Scan parquet  (4)\n\n\n(1) Scan parquet \nOutput [4]: [pickup_location_id#77471, fare_amount#77474, pickup_year#77486, pickup_month#77487]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_a_unpartitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nPushedFilters: [IsNotNull(pickup_year), IsNotNull(pickup_month), EqualTo(pickup_year,2024), EqualTo(pickup_month,2)]\nReadSchema: struct<pickup_location_id:int,fare_amount:double,pickup_year:int,pickup_month:int>\n\n(2) Filter\nInput [4]: [pickup_location_id#77471, fare_amount#77474, pickup_year#77486, pickup_month#77487]\nCondition : (((isnotnull(pickup_year#77486) AND isnotnull(pickup_month#77487)) AND (pickup_year#77486 = 2024)) AND (pickup_month#77487 = 2))\n\n(3) Project\nOutput [2]: [pickup_location_id#77471, fare_amount#77474]\nInput [4]: [pickup_location_id#77471, fare_amount#77474, pickup_year#77486, pickup_month#77487]\n\n(4) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(5) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(6) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=24082]\n\n(7) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#77471]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(8) Project\nOutput [2]: [fare_amount#77474, coalesce(borough#46680, Unknown) AS _groupingexpression#78401]\nInput [4]: [pickup_location_id#77471, fare_amount#77474, location_id#46679, borough#46680]\n\n(9) HashAggregate\nInput [2]: [fare_amount#77474, _groupingexpression#78401]\nKeys [1]: [_groupingexpression#78401]\nFunctions [2]: [partial_count(1), partial_avg(fare_amount#77474)]\nAggregate Attributes [3]: [count#78534L, sum#78535, count#78536L]\nResults [4]: [_groupingexpression#78401, count#78537L, sum#78538, count#78539L]\n\n(10) Exchange\nInput [4]: [_groupingexpression#78401, count#78537L, sum#78538, count#78539L]\nArguments: hashpartitioning(_groupingexpression#78401, 8), ENSURE_REQUIREMENTS, [plan_id=24087]\n\n(11) HashAggregate\nInput [4]: [_groupingexpression#78401, count#78537L, sum#78538, count#78539L]\nKeys [1]: [_groupingexpression#78401]\nFunctions [2]: [count(1), avg(fare_amount#77474)]\nAggregate Attributes [2]: [count(1)#78397L, avg(fare_amount#77474)#78398]\nResults [3]: [_groupingexpression#78401 AS pickup_borough#78392, count(1)#78397L AS count(1)#78399L, avg(fare_amount#77474)#78398 AS avg(fare_amount)#78400]\n\n(12) AdaptiveSparkPlan\nOutput [3]: [pickup_borough#78392, count(1)#78399L, avg(fare_amount)#78400]\nArguments: isFinalPlan=false\n\n"
+        }
+      },
+      "Strategy B (Date Partitioned)": {
+        "Q1_Trips_Per_Borough": {
+          "mean_ms": 1036.23,
+          "median_ms": 1001.63,
+          "stdev_ms": 130.87,
+          "samples_ms": [
+            1263.624700019136,
+            985.9033999964595,
+            926.7422000411898,
+            1001.6260999254882,
+            1003.2614001538604
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (11)\n+- HashAggregate (10)\n   +- Exchange (9)\n      +- HashAggregate (8)\n         +- Project (7)\n            +- BroadcastHashJoin LeftOuter BuildRight (6)\n               :- Project (2)\n               :  +- Scan parquet  (1)\n               +- BroadcastExchange (5)\n                  +- Filter (4)\n                     +- Scan parquet  (3)\n\n\n(1) Scan parquet \nOutput [2]: [pickup_location_id#65017, pickup_date#65031]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_b_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<pickup_location_id:int>\n\n(2) Project\nOutput [1]: [pickup_location_id#65017]\nInput [2]: [pickup_location_id#65017, pickup_date#65031]\n\n(3) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(4) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(5) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=11443]\n\n(6) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#65017]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(7) Project\nOutput [1]: [coalesce(borough#46680, Unknown) AS _groupingexpression#65885]\nInput [3]: [pickup_location_id#65017, location_id#46679, borough#46680]\n\n(8) HashAggregate\nInput [1]: [_groupingexpression#65885]\nKeys [1]: [_groupingexpression#65885]\nFunctions [1]: [partial_count(1)]\nAggregate Attributes [1]: [count#66020L]\nResults [2]: [_groupingexpression#65885, count#66021L]\n\n(9) Exchange\nInput [2]: [_groupingexpression#65885, count#66021L]\nArguments: hashpartitioning(_groupingexpression#65885, 8), ENSURE_REQUIREMENTS, [plan_id=11448]\n\n(10) HashAggregate\nInput [2]: [_groupingexpression#65885, count#66021L]\nKeys [1]: [_groupingexpression#65885]\nFunctions [1]: [count(1)]\nAggregate Attributes [1]: [count(1)#65884L]\nResults [2]: [_groupingexpression#65885 AS pickup_borough#65878, count(1)#65884L AS trip_count#65879L]\n\n(11) AdaptiveSparkPlan\nOutput [2]: [pickup_borough#65878, trip_count#65879L]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q2_Avg_Duration_Per_Day": {
+          "mean_ms": 595.96,
+          "median_ms": 609.15,
+          "stdev_ms": 76.12,
+          "samples_ms": [
+            609.1480001341552,
+            634.1595000121742,
+            527.2025999147445,
+            513.3689001668245,
+            695.9366998635232
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (7)\n+- Sort (6)\n   +- Exchange (5)\n      +- HashAggregate (4)\n         +- Exchange (3)\n            +- HashAggregate (2)\n               +- Scan parquet  (1)\n\n\n(1) Scan parquet \nOutput [2]: [trip_duration_minutes#67060, pickup_date#67055]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_b_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<trip_duration_minutes:double>\n\n(2) HashAggregate\nInput [2]: [trip_duration_minutes#67060, pickup_date#67055]\nKeys [1]: [pickup_date#67055]\nFunctions [1]: [partial_avg(trip_duration_minutes#67060)]\nAggregate Attributes [2]: [sum#67628, count#67629L]\nResults [3]: [pickup_date#67055, sum#67630, count#67631L]\n\n(3) Exchange\nInput [3]: [pickup_date#67055, sum#67630, count#67631L]\nArguments: hashpartitioning(pickup_date#67055, 8), ENSURE_REQUIREMENTS, [plan_id=13154]\n\n(4) HashAggregate\nInput [3]: [pickup_date#67055, sum#67630, count#67631L]\nKeys [1]: [pickup_date#67055]\nFunctions [1]: [avg(trip_duration_minutes#67060)]\nAggregate Attributes [1]: [avg(trip_duration_minutes#67060)#67559]\nResults [2]: [pickup_date#67055, avg(trip_duration_minutes#67060)#67559 AS avg_duration#67554]\n\n(5) Exchange\nInput [2]: [pickup_date#67055, avg_duration#67554]\nArguments: rangepartitioning(pickup_date#67055 ASC NULLS FIRST, 8), ENSURE_REQUIREMENTS, [plan_id=13157]\n\n(6) Sort\nInput [2]: [pickup_date#67055, avg_duration#67554]\nArguments: [pickup_date#67055 ASC NULLS FIRST], true, 0\n\n(7) AdaptiveSparkPlan\nOutput [2]: [pickup_date#67055, avg_duration#67554]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q3_Avg_Fare_Per_Borough": {
+          "mean_ms": 888.2,
+          "median_ms": 887.3,
+          "stdev_ms": 42.61,
+          "samples_ms": [
+            898.1348001398146,
+            887.3010999523103,
+            850.7800998631865,
+            954.1561000514776,
+            850.6275999825448
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (11)\n+- HashAggregate (10)\n   +- Exchange (9)\n      +- HashAggregate (8)\n         +- Project (7)\n            +- BroadcastHashJoin LeftOuter BuildRight (6)\n               :- Project (2)\n               :  +- Scan parquet  (1)\n               +- BroadcastExchange (5)\n                  +- Filter (4)\n                     +- Scan parquet  (3)\n\n\n(1) Scan parquet \nOutput [3]: [pickup_location_id#70959, fare_amount#70962, pickup_date#70973]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_b_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<pickup_location_id:int,fare_amount:double>\n\n(2) Project\nOutput [2]: [pickup_location_id#70959, fare_amount#70962]\nInput [3]: [pickup_location_id#70959, fare_amount#70962, pickup_date#70973]\n\n(3) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(4) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(5) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=17548]\n\n(6) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#70959]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(7) Project\nOutput [2]: [fare_amount#70962, coalesce(borough#46680, Unknown) AS _groupingexpression#71875]\nInput [4]: [pickup_location_id#70959, fare_amount#70962, location_id#46679, borough#46680]\n\n(8) HashAggregate\nInput [2]: [fare_amount#70962, _groupingexpression#71875]\nKeys [1]: [_groupingexpression#71875]\nFunctions [1]: [partial_avg(fare_amount#70962)]\nAggregate Attributes [2]: [sum#72010, count#72011L]\nResults [3]: [_groupingexpression#71875, sum#72012, count#72013L]\n\n(9) Exchange\nInput [3]: [_groupingexpression#71875, sum#72012, count#72013L]\nArguments: hashpartitioning(_groupingexpression#71875, 8), ENSURE_REQUIREMENTS, [plan_id=17553]\n\n(10) HashAggregate\nInput [3]: [_groupingexpression#71875, sum#72012, count#72013L]\nKeys [1]: [_groupingexpression#71875]\nFunctions [1]: [avg(fare_amount#70962)]\nAggregate Attributes [1]: [avg(fare_amount#70962)#71874]\nResults [2]: [_groupingexpression#71875 AS pickup_borough#71868, avg(fare_amount#70962)#71874 AS avg_fare#71869]\n\n(11) AdaptiveSparkPlan\nOutput [2]: [pickup_borough#71868, avg_fare#71869]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q4_Single_Day_Pruned_Analysis": {
+          "mean_ms": 356.65,
+          "median_ms": 354.84,
+          "stdev_ms": 19.33,
+          "samples_ms": [
+            369.22280001454055,
+            377.81169987283647,
+            326.98100013658404,
+            354.8427999485284,
+            354.39460002817214
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (11)\n+- HashAggregate (10)\n   +- Exchange (9)\n      +- HashAggregate (8)\n         +- Project (7)\n            +- BroadcastHashJoin LeftOuter BuildRight (6)\n               :- Project (2)\n               :  +- Scan parquet  (1)\n               +- BroadcastExchange (5)\n                  +- Filter (4)\n                     +- Scan parquet  (3)\n\n\n(1) Scan parquet \nOutput [3]: [pickup_location_id#73097, fare_amount#73100, pickup_date#73111]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_b_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nPartitionFilters: [isnotnull(pickup_date#73111), (pickup_date#73111 = 2024-02-14)]\nReadSchema: struct<pickup_location_id:int,fare_amount:double>\n\n(2) Project\nOutput [2]: [pickup_location_id#73097, fare_amount#73100]\nInput [3]: [pickup_location_id#73097, fare_amount#73100, pickup_date#73111]\n\n(3) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(4) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(5) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=19705]\n\n(6) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#73097]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(7) Project\nOutput [2]: [fare_amount#73100, coalesce(borough#46680, Unknown) AS _groupingexpression#74051]\nInput [4]: [pickup_location_id#73097, fare_amount#73100, location_id#46679, borough#46680]\n\n(8) HashAggregate\nInput [2]: [fare_amount#73100, _groupingexpression#74051]\nKeys [1]: [_groupingexpression#74051]\nFunctions [2]: [partial_count(1), partial_avg(fare_amount#73100)]\nAggregate Attributes [3]: [count#74188L, sum#74189, count#74190L]\nResults [4]: [_groupingexpression#74051, count#74191L, sum#74192, count#74193L]\n\n(9) Exchange\nInput [4]: [_groupingexpression#74051, count#74191L, sum#74192, count#74193L]\nArguments: hashpartitioning(_groupingexpression#74051, 8), ENSURE_REQUIREMENTS, [plan_id=19710]\n\n(10) HashAggregate\nInput [4]: [_groupingexpression#74051, count#74191L, sum#74192, count#74193L]\nKeys [1]: [_groupingexpression#74051]\nFunctions [2]: [count(1), avg(fare_amount#73100)]\nAggregate Attributes [2]: [count(1)#74047L, avg(fare_amount#73100)#74048]\nResults [3]: [_groupingexpression#74051 AS pickup_borough#74042, count(1)#74047L AS count(1)#74049L, avg(fare_amount#73100)#74048 AS avg(fare_amount)#74050]\n\n(11) AdaptiveSparkPlan\nOutput [3]: [pickup_borough#74042, count(1)#74049L, avg(fare_amount)#74050]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q5_Month_Pruned_Analysis": {
+          "mean_ms": 603.33,
+          "median_ms": 598.58,
+          "stdev_ms": 40.66,
+          "samples_ms": [
+            635.8211000915617,
+            598.5795001033694,
+            551.0010998696089,
+            650.9354999288917,
+            580.294500105083
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (12)\n+- HashAggregate (11)\n   +- Exchange (10)\n      +- HashAggregate (9)\n         +- Project (8)\n            +- BroadcastHashJoin LeftOuter BuildRight (7)\n               :- Project (3)\n               :  +- Filter (2)\n               :     +- Scan parquet  (1)\n               +- BroadcastExchange (6)\n                  +- Filter (5)\n                     +- Scan parquet  (4)\n\n\n(1) Scan parquet \nOutput [5]: [pickup_location_id#75277, fare_amount#75280, pickup_year#75292, pickup_month#75293, pickup_date#75291]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_b_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nPushedFilters: [IsNotNull(pickup_year), IsNotNull(pickup_month), EqualTo(pickup_year,2024), EqualTo(pickup_month,2)]\nReadSchema: struct<pickup_location_id:int,fare_amount:double,pickup_year:int,pickup_month:int>\n\n(2) Filter\nInput [5]: [pickup_location_id#75277, fare_amount#75280, pickup_year#75292, pickup_month#75293, pickup_date#75291]\nCondition : (((isnotnull(pickup_year#75292) AND isnotnull(pickup_month#75293)) AND (pickup_year#75292 = 2024)) AND (pickup_month#75293 = 2))\n\n(3) Project\nOutput [2]: [pickup_location_id#75277, fare_amount#75280]\nInput [5]: [pickup_location_id#75277, fare_amount#75280, pickup_year#75292, pickup_month#75293, pickup_date#75291]\n\n(4) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(5) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(6) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=21925]\n\n(7) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#75277]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(8) Project\nOutput [2]: [fare_amount#75280, coalesce(borough#46680, Unknown) AS _groupingexpression#76207]\nInput [4]: [pickup_location_id#75277, fare_amount#75280, location_id#46679, borough#46680]\n\n(9) HashAggregate\nInput [2]: [fare_amount#75280, _groupingexpression#76207]\nKeys [1]: [_groupingexpression#76207]\nFunctions [2]: [partial_count(1), partial_avg(fare_amount#75280)]\nAggregate Attributes [3]: [count#76340L, sum#76341, count#76342L]\nResults [4]: [_groupingexpression#76207, count#76343L, sum#76344, count#76345L]\n\n(10) Exchange\nInput [4]: [_groupingexpression#76207, count#76343L, sum#76344, count#76345L]\nArguments: hashpartitioning(_groupingexpression#76207, 8), ENSURE_REQUIREMENTS, [plan_id=21930]\n\n(11) HashAggregate\nInput [4]: [_groupingexpression#76207, count#76343L, sum#76344, count#76345L]\nKeys [1]: [_groupingexpression#76207]\nFunctions [2]: [count(1), avg(fare_amount#75280)]\nAggregate Attributes [2]: [count(1)#76203L, avg(fare_amount#75280)#76204]\nResults [3]: [_groupingexpression#76207 AS pickup_borough#76198, count(1)#76203L AS count(1)#76205L, avg(fare_amount#75280)#76204 AS avg(fare_amount)#76206]\n\n(12) AdaptiveSparkPlan\nOutput [3]: [pickup_borough#76198, count(1)#76205L, avg(fare_amount)#76206]\nArguments: isFinalPlan=false\n\n"
+        }
+      },
+      "Strategy C (Monthly Partitioned)": {
+        "Q1_Trips_Per_Borough": {
+          "mean_ms": 845.77,
+          "median_ms": 906.36,
+          "stdev_ms": 89.71,
+          "samples_ms": [
+            907.4876999948174,
+            906.3641999382526,
+            918.339200085029,
+            733.2528999540955,
+            763.4097000118345
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (11)\n+- HashAggregate (10)\n   +- Exchange (9)\n      +- HashAggregate (8)\n         +- Project (7)\n            +- BroadcastHashJoin LeftOuter BuildRight (6)\n               :- Project (2)\n               :  +- Scan parquet  (1)\n               +- BroadcastExchange (5)\n                  +- Filter (4)\n                     +- Scan parquet  (3)\n\n\n(1) Scan parquet \nOutput [3]: [pickup_location_id#66029, pickup_year#66044, pickup_month#66045]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_c_monthly_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<pickup_location_id:int>\n\n(2) Project\nOutput [1]: [pickup_location_id#66029]\nInput [3]: [pickup_location_id#66029, pickup_year#66044, pickup_month#66045]\n\n(3) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(4) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(5) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=12497]\n\n(6) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#66029]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(7) Project\nOutput [1]: [coalesce(borough#46680, Unknown) AS _groupingexpression#66897]\nInput [3]: [pickup_location_id#66029, location_id#46679, borough#46680]\n\n(8) HashAggregate\nInput [1]: [_groupingexpression#66897]\nKeys [1]: [_groupingexpression#66897]\nFunctions [1]: [partial_count(1)]\nAggregate Attributes [1]: [count#67032L]\nResults [2]: [_groupingexpression#66897, count#67033L]\n\n(9) Exchange\nInput [2]: [_groupingexpression#66897, count#67033L]\nArguments: hashpartitioning(_groupingexpression#66897, 8), ENSURE_REQUIREMENTS, [plan_id=12502]\n\n(10) HashAggregate\nInput [2]: [_groupingexpression#66897, count#67033L]\nKeys [1]: [_groupingexpression#66897]\nFunctions [1]: [count(1)]\nAggregate Attributes [1]: [count(1)#66896L]\nResults [2]: [_groupingexpression#66897 AS pickup_borough#66890, count(1)#66896L AS trip_count#66891L]\n\n(11) AdaptiveSparkPlan\nOutput [2]: [pickup_borough#66890, trip_count#66891L]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q2_Avg_Duration_Per_Day": {
+          "mean_ms": 431.28,
+          "median_ms": 435.24,
+          "stdev_ms": 12.17,
+          "samples_ms": [
+            439.9464998859912,
+            426.67629988864064,
+            412.29690006002784,
+            435.2434000466019,
+            442.2495998442173
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (8)\n+- Sort (7)\n   +- Exchange (6)\n      +- HashAggregate (5)\n         +- Exchange (4)\n            +- HashAggregate (3)\n               +- Project (2)\n                  +- Scan parquet  (1)\n\n\n(1) Scan parquet \nOutput [4]: [pickup_date#67653, trip_duration_minutes#67658, pickup_year#67654, pickup_month#67655]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_c_monthly_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<pickup_date:date,trip_duration_minutes:double>\n\n(2) Project\nOutput [2]: [pickup_date#67653, trip_duration_minutes#67658]\nInput [4]: [pickup_date#67653, trip_duration_minutes#67658, pickup_year#67654, pickup_month#67655]\n\n(3) HashAggregate\nInput [2]: [pickup_date#67653, trip_duration_minutes#67658]\nKeys [1]: [pickup_date#67653]\nFunctions [1]: [partial_avg(trip_duration_minutes#67658)]\nAggregate Attributes [2]: [sum#68226, count#68227L]\nResults [3]: [pickup_date#67653, sum#68228, count#68229L]\n\n(4) Exchange\nInput [3]: [pickup_date#67653, sum#68228, count#68229L]\nArguments: hashpartitioning(pickup_date#67653, 8), ENSURE_REQUIREMENTS, [plan_id=13824]\n\n(5) HashAggregate\nInput [3]: [pickup_date#67653, sum#68228, count#68229L]\nKeys [1]: [pickup_date#67653]\nFunctions [1]: [avg(trip_duration_minutes#67658)]\nAggregate Attributes [1]: [avg(trip_duration_minutes#67658)#68157]\nResults [2]: [pickup_date#67653, avg(trip_duration_minutes#67658)#68157 AS avg_duration#68152]\n\n(6) Exchange\nInput [2]: [pickup_date#67653, avg_duration#68152]\nArguments: rangepartitioning(pickup_date#67653 ASC NULLS FIRST, 8), ENSURE_REQUIREMENTS, [plan_id=13827]\n\n(7) Sort\nInput [2]: [pickup_date#67653, avg_duration#68152]\nArguments: [pickup_date#67653 ASC NULLS FIRST], true, 0\n\n(8) AdaptiveSparkPlan\nOutput [2]: [pickup_date#67653, avg_duration#68152]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q3_Avg_Fare_Per_Borough": {
+          "mean_ms": 823.64,
+          "median_ms": 818.6,
+          "stdev_ms": 47.92,
+          "samples_ms": [
+            818.5998999979347,
+            833.6225000675768,
+            778.7142000161111,
+            787.7797000110149,
+            899.5056001003832
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (11)\n+- HashAggregate (10)\n   +- Exchange (9)\n      +- HashAggregate (8)\n         +- Project (7)\n            +- BroadcastHashJoin LeftOuter BuildRight (6)\n               :- Project (2)\n               :  +- Scan parquet  (1)\n               +- BroadcastExchange (5)\n                  +- Filter (4)\n                     +- Scan parquet  (3)\n\n\n(1) Scan parquet \nOutput [4]: [pickup_location_id#68835, fare_amount#68838, pickup_year#68850, pickup_month#68851]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_c_monthly_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nReadSchema: struct<pickup_location_id:int,fare_amount:double>\n\n(2) Project\nOutput [2]: [pickup_location_id#68835, fare_amount#68838]\nInput [4]: [pickup_location_id#68835, fare_amount#68838, pickup_year#68850, pickup_month#68851]\n\n(3) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(4) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(5) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=15496]\n\n(6) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#68835]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(7) Project\nOutput [2]: [fare_amount#68838, coalesce(borough#46680, Unknown) AS _groupingexpression#69751]\nInput [4]: [pickup_location_id#68835, fare_amount#68838, location_id#46679, borough#46680]\n\n(8) HashAggregate\nInput [2]: [fare_amount#68838, _groupingexpression#69751]\nKeys [1]: [_groupingexpression#69751]\nFunctions [1]: [partial_avg(fare_amount#68838)]\nAggregate Attributes [2]: [sum#69886, count#69887L]\nResults [3]: [_groupingexpression#69751, sum#69888, count#69889L]\n\n(9) Exchange\nInput [3]: [_groupingexpression#69751, sum#69888, count#69889L]\nArguments: hashpartitioning(_groupingexpression#69751, 8), ENSURE_REQUIREMENTS, [plan_id=15501]\n\n(10) HashAggregate\nInput [3]: [_groupingexpression#69751, sum#69888, count#69889L]\nKeys [1]: [_groupingexpression#69751]\nFunctions [1]: [avg(fare_amount#68838)]\nAggregate Attributes [1]: [avg(fare_amount#68838)#69750]\nResults [2]: [_groupingexpression#69751 AS pickup_borough#69744, avg(fare_amount#68838)#69750 AS avg_fare#69745]\n\n(11) AdaptiveSparkPlan\nOutput [2]: [pickup_borough#69744, avg_fare#69745]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q4_Single_Day_Pruned_Analysis": {
+          "mean_ms": 452.44,
+          "median_ms": 417.56,
+          "stdev_ms": 72.1,
+          "samples_ms": [
+            522.851400077343,
+            536.5655000787228,
+            406.4615999814123,
+            417.56440000608563,
+            378.75279993750155
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (12)\n+- HashAggregate (11)\n   +- Exchange (10)\n      +- HashAggregate (9)\n         +- Project (8)\n            +- BroadcastHashJoin LeftOuter BuildRight (7)\n               :- Project (3)\n               :  +- Filter (2)\n               :     +- Scan parquet  (1)\n               +- BroadcastExchange (6)\n                  +- Filter (5)\n                     +- Scan parquet  (4)\n\n\n(1) Scan parquet \nOutput [5]: [pickup_location_id#74201, fare_amount#74204, pickup_date#74215, pickup_year#74216, pickup_month#74217]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_c_monthly_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nPushedFilters: [IsNotNull(pickup_date), EqualTo(pickup_date,2024-02-14)]\nReadSchema: struct<pickup_location_id:int,fare_amount:double,pickup_date:date>\n\n(2) Filter\nInput [5]: [pickup_location_id#74201, fare_amount#74204, pickup_date#74215, pickup_year#74216, pickup_month#74217]\nCondition : (isnotnull(pickup_date#74215) AND (pickup_date#74215 = 2024-02-14))\n\n(3) Project\nOutput [2]: [pickup_location_id#74201, fare_amount#74204]\nInput [5]: [pickup_location_id#74201, fare_amount#74204, pickup_date#74215, pickup_year#74216, pickup_month#74217]\n\n(4) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(5) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(6) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=20815]\n\n(7) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#74201]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(8) Project\nOutput [2]: [fare_amount#74204, coalesce(borough#46680, Unknown) AS _groupingexpression#75131]\nInput [4]: [pickup_location_id#74201, fare_amount#74204, location_id#46679, borough#46680]\n\n(9) HashAggregate\nInput [2]: [fare_amount#74204, _groupingexpression#75131]\nKeys [1]: [_groupingexpression#75131]\nFunctions [2]: [partial_count(1), partial_avg(fare_amount#74204)]\nAggregate Attributes [3]: [count#75264L, sum#75265, count#75266L]\nResults [4]: [_groupingexpression#75131, count#75267L, sum#75268, count#75269L]\n\n(10) Exchange\nInput [4]: [_groupingexpression#75131, count#75267L, sum#75268, count#75269L]\nArguments: hashpartitioning(_groupingexpression#75131, 8), ENSURE_REQUIREMENTS, [plan_id=20820]\n\n(11) HashAggregate\nInput [4]: [_groupingexpression#75131, count#75267L, sum#75268, count#75269L]\nKeys [1]: [_groupingexpression#75131]\nFunctions [2]: [count(1), avg(fare_amount#74204)]\nAggregate Attributes [2]: [count(1)#75127L, avg(fare_amount#74204)#75128]\nResults [3]: [_groupingexpression#75131 AS pickup_borough#75122, count(1)#75127L AS count(1)#75129L, avg(fare_amount#74204)#75128 AS avg(fare_amount)#75130]\n\n(12) AdaptiveSparkPlan\nOutput [3]: [pickup_borough#75122, count(1)#75129L, avg(fare_amount)#75130]\nArguments: isFinalPlan=false\n\n"
+        },
+        "Q5_Month_Pruned_Analysis": {
+          "mean_ms": 477.72,
+          "median_ms": 467.2,
+          "stdev_ms": 40.92,
+          "samples_ms": [
+            537.7626998815686,
+            493.0473999120295,
+            467.1951998025179,
+            463.2381000556052,
+            427.3441999685019
+          ],
+          "physical_plan": "== Physical Plan ==\nAdaptiveSparkPlan (11)\n+- HashAggregate (10)\n   +- Exchange (9)\n      +- HashAggregate (8)\n         +- Project (7)\n            +- BroadcastHashJoin LeftOuter BuildRight (6)\n               :- Project (2)\n               :  +- Scan parquet  (1)\n               +- BroadcastExchange (5)\n                  +- Filter (4)\n                     +- Scan parquet  (3)\n\n\n(1) Scan parquet \nOutput [4]: [pickup_location_id#76353, fare_amount#76356, pickup_year#76368, pickup_month#76369]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/benchmark/strategy_c_monthly_partitioned/7378aaa59cad4b35ac40eb9a75ca9daf]\nPartitionFilters: [isnotnull(pickup_year#76368), isnotnull(pickup_month#76369), (pickup_year#76368 = 2024), (pickup_month#76369 = 2)]\nReadSchema: struct<pickup_location_id:int,fare_amount:double>\n\n(2) Project\nOutput [2]: [pickup_location_id#76353, fare_amount#76356]\nInput [4]: [pickup_location_id#76353, fare_amount#76356, pickup_year#76368, pickup_month#76369]\n\n(3) Scan parquet \nOutput [2]: [location_id#46679, borough#46680]\nBatched: true\nLocation: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]\nPushedFilters: [IsNotNull(location_id)]\nReadSchema: struct<location_id:int,borough:string>\n\n(4) Filter\nInput [2]: [location_id#46679, borough#46680]\nCondition : isnotnull(location_id#46679)\n\n(5) BroadcastExchange\nInput [2]: [location_id#46679, borough#46680]\nArguments: HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=22979]\n\n(6) BroadcastHashJoin\nLeft keys [1]: [pickup_location_id#76353]\nRight keys [1]: [location_id#46679]\nJoin type: LeftOuter\nJoin condition: None\n\n(7) Project\nOutput [2]: [fare_amount#76356, coalesce(borough#46680, Unknown) AS _groupingexpression#77319]\nInput [4]: [pickup_location_id#76353, fare_amount#76356, location_id#46679, borough#46680]\n\n(8) HashAggregate\nInput [2]: [fare_amount#76356, _groupingexpression#77319]\nKeys [1]: [_groupingexpression#77319]\nFunctions [2]: [partial_count(1), partial_avg(fare_amount#76356)]\nAggregate Attributes [3]: [count#77458L, sum#77459, count#77460L]\nResults [4]: [_groupingexpression#77319, count#77461L, sum#77462, count#77463L]\n\n(9) Exchange\nInput [4]: [_groupingexpression#77319, count#77461L, sum#77462, count#77463L]\nArguments: hashpartitioning(_groupingexpression#77319, 8), ENSURE_REQUIREMENTS, [plan_id=22984]\n\n(10) HashAggregate\nInput [4]: [_groupingexpression#77319, count#77461L, sum#77462, count#77463L]\nKeys [1]: [_groupingexpression#77319]\nFunctions [2]: [count(1), avg(fare_amount#76356)]\nAggregate Attributes [2]: [count(1)#77315L, avg(fare_amount#76356)#77316]\nResults [3]: [_groupingexpression#77319 AS pickup_borough#77310, count(1)#77315L AS count(1)#77317L, avg(fare_amount#76356)#77316 AS avg(fare_amount)#77318]\n\n(11) AdaptiveSparkPlan\nOutput [3]: [pickup_borough#77310, count(1)#77317L, avg(fare_amount)#77318]\nArguments: isFinalPlan=false\n\n"
+        }
+      }
+    },
+    "results_equivalent": true,
+    "run_id": "7378aaa59cad4b35ac40eb9a75ca9daf",
+    "input_kind": "raw_taxi_parquet",
+    "source_path": "data/yellow_tripdata_2024-*.parquet",
+    "writer_partitions": 8,
+    "methodology": "Raw Parquet loading, schema checks, casts, transformations, disk materialization, validation, deduplication, equal writer redistribution and Delta write timed separately for each layout. Shared Bronze, quarantine and metadata writes excluded. One warmup; Spark cache cleared before measured queries, OS cache remains warm. Strategy order rotated per query; ingestion order fixed with one trial per layout."
+  },
+  "total_execution_seconds": 1265.442
+}

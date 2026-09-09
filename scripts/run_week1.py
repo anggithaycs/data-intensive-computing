@@ -16,12 +16,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.render_benchmark_report import render
 from src.common.config import build_ingestors, load_config
 from src.common.logger import get_logger
 from src.common.spark_session import get_spark_session, stop_spark_session
 from src.integration.pipeline import UrbanDataIntegrationPipeline
 from src.storage.benchmark import StorageBenchmarkRunner
+from src.storage.report import render
 
 logger = get_logger("RunWeek1")
 

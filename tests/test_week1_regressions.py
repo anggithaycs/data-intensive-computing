@@ -16,7 +16,6 @@ from pyspark.errors import AnalysisException
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-from scripts.render_benchmark_report import render
 from src.common.config import build_ingestors, load_config
 from src.common.spark_session import get_spark_session, stop_spark_session
 from src.ingestion.air_quality_ingestion import AirQualityIngestor
@@ -25,6 +24,7 @@ from src.ingestion.weather_ingestion import WeatherIngestor
 from src.ingestion.zone_ingestion import TaxiZoneIngestor
 from src.integration.pipeline import UrbanDataIntegrationPipeline
 from src.storage.benchmark import StorageBenchmarkRunner
+from src.storage.report import render
 
 
 class ConfigTests(unittest.TestCase):

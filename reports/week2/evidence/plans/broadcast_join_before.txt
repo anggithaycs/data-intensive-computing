@@ -1,0 +1,94 @@
+== Physical Plan ==
+* Sort (16)
++- Exchange (15)
+   +- * HashAggregate (14)
+      +- * HashAggregate (13)
+         +- * Project (12)
+            +- * SortMergeJoin LeftOuter (11)
+               :- * Sort (5)
+               :  +- Exchange (4)
+               :     +- * Project (3)
+               :        +- * ColumnarToRow (2)
+               :           +- Scan parquet  (1)
+               +- * Sort (10)
+                  +- Exchange (9)
+                     +- * Filter (8)
+                        +- * ColumnarToRow (7)
+                           +- Scan parquet  (6)
+
+
+(1) Scan parquet 
+Output [4]: [pickup_location_id#1094, pickup_date#1108, pickup_year#1109, pickup_month#1110]
+Batched: true
+Location: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_trips]
+ReadSchema: struct<pickup_location_id:int,pickup_date:date>
+
+(2) ColumnarToRow [codegen id : 1]
+Input [4]: [pickup_location_id#1094, pickup_date#1108, pickup_year#1109, pickup_month#1110]
+
+(3) Project [codegen id : 1]
+Output [2]: [pickup_location_id#1094, pickup_date#1108]
+Input [4]: [pickup_location_id#1094, pickup_date#1108, pickup_year#1109, pickup_month#1110]
+
+(4) Exchange
+Input [2]: [pickup_location_id#1094, pickup_date#1108]
+Arguments: hashpartitioning(pickup_location_id#1094, 8), ENSURE_REQUIREMENTS, [plan_id=23763]
+
+(5) Sort [codegen id : 2]
+Input [2]: [pickup_location_id#1094, pickup_date#1108]
+Arguments: [pickup_location_id#1094 ASC NULLS FIRST], false, 0
+
+(6) Scan parquet 
+Output [3]: [location_id#1115, borough#1116, zone#1117]
+Batched: true
+Location: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/clean_taxi_zones]
+PushedFilters: [IsNotNull(location_id)]
+ReadSchema: struct<location_id:int,borough:string,zone:string>
+
+(7) ColumnarToRow [codegen id : 3]
+Input [3]: [location_id#1115, borough#1116, zone#1117]
+
+(8) Filter [codegen id : 3]
+Input [3]: [location_id#1115, borough#1116, zone#1117]
+Condition : isnotnull(location_id#1115)
+
+(9) Exchange
+Input [3]: [location_id#1115, borough#1116, zone#1117]
+Arguments: hashpartitioning(location_id#1115, 8), ENSURE_REQUIREMENTS, [plan_id=23772]
+
+(10) Sort [codegen id : 4]
+Input [3]: [location_id#1115, borough#1116, zone#1117]
+Arguments: [location_id#1115 ASC NULLS FIRST], false, 0
+
+(11) SortMergeJoin [codegen id : 5]
+Left keys [1]: [pickup_location_id#1094]
+Right keys [1]: [location_id#1115]
+Join type: LeftOuter
+Join condition: None
+
+(12) Project [codegen id : 5]
+Output [4]: [pickup_location_id#1094, trunc(pickup_date#1108, month) AS _groupingexpression#41321, coalesce(zone#1117, Unknown) AS _groupingexpression#41322, coalesce(borough#1116, Unknown) AS _groupingexpression#41323]
+Input [5]: [pickup_location_id#1094, pickup_date#1108, location_id#1115, borough#1116, zone#1117]
+
+(13) HashAggregate [codegen id : 5]
+Input [4]: [pickup_location_id#1094, _groupingexpression#41321, _groupingexpression#41322, _groupingexpression#41323]
+Keys [4]: [_groupingexpression#41321, pickup_location_id#1094, _groupingexpression#41322, _groupingexpression#41323]
+Functions [1]: [partial_count(1)]
+Aggregate Attributes [1]: [count#41458L]
+Results [5]: [_groupingexpression#41321, pickup_location_id#1094, _groupingexpression#41322, _groupingexpression#41323, count#41459L]
+
+(14) HashAggregate [codegen id : 5]
+Input [5]: [_groupingexpression#41321, pickup_location_id#1094, _groupingexpression#41322, _groupingexpression#41323, count#41459L]
+Keys [4]: [_groupingexpression#41321, pickup_location_id#1094, _groupingexpression#41322, _groupingexpression#41323]
+Functions [1]: [count(1)]
+Aggregate Attributes [1]: [count(1)#41320L]
+Results [5]: [_groupingexpression#41321 AS month#41316, pickup_location_id#1094, _groupingexpression#41322 AS pickup_zone#41317, _groupingexpression#41323 AS pickup_borough#41318, count(1)#41320L AS trip_count#41319L]
+
+(15) Exchange
+Input [5]: [month#41316, pickup_location_id#1094, pickup_zone#41317, pickup_borough#41318, trip_count#41319L]
+Arguments: rangepartitioning(month#41316 ASC NULLS FIRST, pickup_location_id#1094 ASC NULLS FIRST, 8), ENSURE_REQUIREMENTS, [plan_id=23782]
+
+(16) Sort [codegen id : 6]
+Input [5]: [month#41316, pickup_location_id#1094, pickup_zone#41317, pickup_borough#41318, trip_count#41319L]
+Arguments: [month#41316 ASC NULLS FIRST, pickup_location_id#1094 ASC NULLS FIRST], true, 0
+

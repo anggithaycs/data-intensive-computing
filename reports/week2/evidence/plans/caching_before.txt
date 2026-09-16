@@ -1,0 +1,50 @@
+== Physical Plan ==
+* Sort (8)
++- Exchange (7)
+   +- * HashAggregate (6)
+      +- Exchange (5)
+         +- * HashAggregate (4)
+            +- * Project (3)
+               +- * ColumnarToRow (2)
+                  +- Scan parquet  (1)
+
+
+(1) Scan parquet 
+Output [5]: [trip_distance#4, pickup_precipitation_mm#33, pickup_weather_matched#38, pickup_year#22, pickup_month#23]
+Batched: true
+Location: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/integrated_taxi_trips]
+ReadSchema: struct<trip_distance:double,pickup_precipitation_mm:double,pickup_weather_matched:boolean>
+
+(2) ColumnarToRow [codegen id : 1]
+Input [5]: [trip_distance#4, pickup_precipitation_mm#33, pickup_weather_matched#38, pickup_year#22, pickup_month#23]
+
+(3) Project [codegen id : 1]
+Output [2]: [trip_distance#4, CASE WHEN (pickup_weather_matched#38 AND (pickup_precipitation_mm#33 > 0.0)) THEN wet WHEN (pickup_weather_matched#38 AND (pickup_precipitation_mm#33 = 0.0)) THEN dry ELSE unknown END AS weather#58]
+Input [5]: [trip_distance#4, pickup_precipitation_mm#33, pickup_weather_matched#38, pickup_year#22, pickup_month#23]
+
+(4) HashAggregate [codegen id : 1]
+Input [2]: [trip_distance#4, weather#58]
+Keys [1]: [weather#58]
+Functions [3]: [partial_count(1), partial_count(trip_distance#4), partial_avg(trip_distance#4)]
+Aggregate Attributes [4]: [count#13188L, count#13189L, sum#13190, count#13191L]
+Results [5]: [weather#58, count#13192L, count#13193L, sum#13194, count#13195L]
+
+(5) Exchange
+Input [5]: [weather#58, count#13192L, count#13193L, sum#13194, count#13195L]
+Arguments: hashpartitioning(weather#58, 8), ENSURE_REQUIREMENTS, [plan_id=6384]
+
+(6) HashAggregate [codegen id : 2]
+Input [5]: [weather#58, count#13192L, count#13193L, sum#13194, count#13195L]
+Keys [1]: [weather#58]
+Functions [3]: [count(1), count(trip_distance#4), avg(trip_distance#4)]
+Aggregate Attributes [3]: [count(1)#13117L, count(trip_distance#4)#13118L, avg(trip_distance#4)#13119]
+Results [4]: [weather#58, count(1)#13117L AS trip_count#13114L, count(trip_distance#4)#13118L AS distance_count#13115L, avg(trip_distance#4)#13119 AS avg_distance#13116]
+
+(7) Exchange
+Input [4]: [weather#58, trip_count#13114L, distance_count#13115L, avg_distance#13116]
+Arguments: rangepartitioning(weather#58 ASC NULLS FIRST, 8), ENSURE_REQUIREMENTS, [plan_id=6388]
+
+(8) Sort [codegen id : 3]
+Input [4]: [weather#58, trip_count#13114L, distance_count#13115L, avg_distance#13116]
+Arguments: [weather#58 ASC NULLS FIRST], true, 0
+

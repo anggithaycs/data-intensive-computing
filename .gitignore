@@ -12,3 +12,7 @@ data/
 /scripts/explore/
 /scripts/build*
 /scripts/render*
+/reports/week2_simple/
+/reports_tmp/
+/submitted/
+/output/

@@ -1,0 +1,56 @@
+== Physical Plan ==
+* Sort (9)
++- Exchange (8)
+   +- * HashAggregate (7)
+      +- Exchange (6)
+         +- * HashAggregate (5)
+            +- * Project (4)
+               +- * Filter (3)
+                  +- * ColumnarToRow (2)
+                     +- Scan parquet  (1)
+
+
+(1) Scan parquet 
+Output [4]: [pickup_location_id#7, pickup_date#21, pickup_year#22, pickup_month#23]
+Batched: true
+Location: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/integrated_taxi_trips]
+PushedFilters: [IsNotNull(pickup_date), GreaterThanOrEqual(pickup_date,2024-02-01), LessThan(pickup_date,2024-03-01)]
+ReadSchema: struct<pickup_location_id:int,pickup_date:date>
+
+(2) ColumnarToRow [codegen id : 1]
+Input [4]: [pickup_location_id#7, pickup_date#21, pickup_year#22, pickup_month#23]
+
+(3) Filter [codegen id : 1]
+Input [4]: [pickup_location_id#7, pickup_date#21, pickup_year#22, pickup_month#23]
+Condition : ((isnotnull(pickup_date#21) AND (pickup_date#21 >= 2024-02-01)) AND (pickup_date#21 < 2024-03-01))
+
+(4) Project [codegen id : 1]
+Output [1]: [pickup_location_id#7]
+Input [4]: [pickup_location_id#7, pickup_date#21, pickup_year#22, pickup_month#23]
+
+(5) HashAggregate [codegen id : 1]
+Input [1]: [pickup_location_id#7]
+Keys [1]: [pickup_location_id#7]
+Functions [1]: [partial_count(1)]
+Aggregate Attributes [1]: [count#39346L]
+Results [2]: [pickup_location_id#7, count#39347L]
+
+(6) Exchange
+Input [2]: [pickup_location_id#7, count#39347L]
+Arguments: hashpartitioning(pickup_location_id#7, 8), ENSURE_REQUIREMENTS, [plan_id=22308]
+
+(7) HashAggregate [codegen id : 2]
+Input [2]: [pickup_location_id#7, count#39347L]
+Keys [1]: [pickup_location_id#7]
+Functions [1]: [count(1)]
+Aggregate Attributes [1]: [count(1)#39279L]
+Results [2]: [pickup_location_id#7, count(1)#39279L AS trip_count#39278L]
+
+(8) Exchange
+Input [2]: [pickup_location_id#7, trip_count#39278L]
+Arguments: rangepartitioning(pickup_location_id#7 ASC NULLS FIRST, 8), ENSURE_REQUIREMENTS, [plan_id=22312]
+
+(9) Sort [codegen id : 3]
+Input [2]: [pickup_location_id#7, trip_count#39278L]
+Arguments: [pickup_location_id#7 ASC NULLS FIRST], true, 0
+

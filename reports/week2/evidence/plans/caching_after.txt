@@ -1,0 +1,59 @@
+== Physical Plan ==
+* Sort (10)
++- Exchange (9)
+   +- * HashAggregate (8)
+      +- Exchange (7)
+         +- * HashAggregate (6)
+            +- Scan In-memory table trips (1)
+                  +- InMemoryRelation (2)
+                        +- * Project (5)
+                           +- * ColumnarToRow (4)
+                              +- Scan parquet  (3)
+
+
+(1) Scan In-memory table trips
+Output [2]: [trip_distance#4, weather#58]
+Arguments: [trip_distance#4, weather#58]
+
+(2) InMemoryRelation
+Arguments: [pickup_datetime#1, pickup_date#21, pickup_year#22, pickup_month#23, pickup_location_id#7, pickup_zone#29, pickup_borough#28, trip_distance#4, trip_duration_minutes#26, fare_amount#10, pickup_pm25_citywide#41, hour_utc#57, weather#58], StorageLevel(disk, memory, deserialized, 1 replicas)
+
+(3) Scan parquet 
+Output [13]: [pickup_datetime#1, trip_distance#4, pickup_location_id#7, fare_amount#10, pickup_date#21, trip_duration_minutes#26, pickup_borough#28, pickup_zone#29, pickup_precipitation_mm#33, pickup_weather_matched#38, pickup_pm25_citywide#41, pickup_year#22, pickup_month#23]
+Batched: true
+Location: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/integrated_taxi_trips]
+ReadSchema: struct<pickup_datetime:timestamp,trip_distance:double,pickup_location_id:int,fare_amount:double,pickup_date:date,trip_duration_minutes:double,pickup_borough:string,pickup_zone:string,pickup_precipitation_mm:double,pickup_weather_matched:boolean,pickup_pm25_citywide:double>
+
+(4) ColumnarToRow [codegen id : 1]
+Input [13]: [pickup_datetime#1, trip_distance#4, pickup_location_id#7, fare_amount#10, pickup_date#21, trip_duration_minutes#26, pickup_borough#28, pickup_zone#29, pickup_precipitation_mm#33, pickup_weather_matched#38, pickup_pm25_citywide#41, pickup_year#22, pickup_month#23]
+
+(5) Project [codegen id : 1]
+Output [13]: [pickup_datetime#1, pickup_date#21, pickup_year#22, pickup_month#23, pickup_location_id#7, pickup_zone#29, pickup_borough#28, trip_distance#4, trip_duration_minutes#26, fare_amount#10, pickup_pm25_citywide#41, date_trunc(hour, pickup_datetime#1, Some(UTC)) AS hour_utc#57, CASE WHEN (pickup_weather_matched#38 AND (pickup_precipitation_mm#33 > 0.0)) THEN wet WHEN (pickup_weather_matched#38 AND (pickup_precipitation_mm#33 = 0.0)) THEN dry ELSE unknown END AS weather#58]
+Input [13]: [pickup_datetime#1, trip_distance#4, pickup_location_id#7, fare_amount#10, pickup_date#21, trip_duration_minutes#26, pickup_borough#28, pickup_zone#29, pickup_precipitation_mm#33, pickup_weather_matched#38, pickup_pm25_citywide#41, pickup_year#22, pickup_month#23]
+
+(6) HashAggregate [codegen id : 1]
+Input [2]: [trip_distance#4, weather#58]
+Keys [1]: [weather#58]
+Functions [3]: [partial_count(1), partial_count(trip_distance#4), partial_avg(trip_distance#4)]
+Aggregate Attributes [4]: [count#31503L, count#31504L, sum#31505, count#31506L]
+Results [5]: [weather#58, count#31507L, count#31508L, sum#31509, count#31510L]
+
+(7) Exchange
+Input [5]: [weather#58, count#31507L, count#31508L, sum#31509, count#31510L]
+Arguments: hashpartitioning(weather#58, 8), ENSURE_REQUIREMENTS, [plan_id=15481]
+
+(8) HashAggregate [codegen id : 2]
+Input [5]: [weather#58, count#31507L, count#31508L, sum#31509, count#31510L]
+Keys [1]: [weather#58]
+Functions [3]: [count(1), count(trip_distance#4), avg(trip_distance#4)]
+Aggregate Attributes [3]: [count(1)#31305L, count(trip_distance#4)#31306L, avg(trip_distance#4)#31307]
+Results [4]: [weather#58, count(1)#31305L AS trip_count#31302L, count(trip_distance#4)#31306L AS distance_count#31303L, avg(trip_distance#4)#31307 AS avg_distance#31304]
+
+(9) Exchange
+Input [4]: [weather#58, trip_count#31302L, distance_count#31303L, avg_distance#31304]
+Arguments: rangepartitioning(weather#58 ASC NULLS FIRST, 8), ENSURE_REQUIREMENTS, [plan_id=15485]
+
+(10) Sort [codegen id : 3]
+Input [4]: [weather#58, trip_count#31302L, distance_count#31303L, avg_distance#31304]
+Arguments: [weather#58 ASC NULLS FIRST], true, 0
+

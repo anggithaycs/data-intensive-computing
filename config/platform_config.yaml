@@ -278,7 +278,7 @@ datasets:
     - longitude
   taxi_zones:
     format: csv
-    source_path: data/taxi_zone_lookup (1).csv
+    source_path: data/taxi_zone_lookup.csv
     bronze_path: storage/delta/bronze/raw_taxi_zones
     silver_path: storage/delta/silver/clean_taxi_zones
     quarantine_path: storage/delta/quarantine/taxi_zones

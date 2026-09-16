@@ -1,0 +1,597 @@
+== Physical Plan ==
+AdaptiveSparkPlan (103)
++- == Final Plan ==
+   ResultQueryStage (63)
+   +- * Sort (62)
+      +- Window (61)
+         +- * Sort (60)
+            +- ShuffleQueryStage (59), Statistics(sizeInBytes=15.1 KiB, rowCount=262)
+               +- Exchange (58)
+                  +- * Project (57)
+                     +- * Filter (56)
+                        +- * HashAggregate (55)
+                           +- AQEShuffleRead (54)
+                              +- ShuffleQueryStage (53), Statistics(sizeInBytes=19.2 KiB, rowCount=262)
+                                 +- Exchange (52)
+                                    +- * HashAggregate (51)
+                                       +- * Project (50)
+                                          +- * SortMergeJoin LeftOuter (49)
+                                             :- * Sort (38)
+                                             :  +- AQEShuffleRead (37)
+                                             :     +- ShuffleQueryStage (36), Statistics(sizeInBytes=34.3 KiB, rowCount=524)
+                                             :        +- Exchange (35)
+                                             :           +- CartesianProduct Inner (34)
+                                             :              :- * HashAggregate (8)
+                                             :              :  +- AQEShuffleRead (7)
+                                             :              :     +- ShuffleQueryStage (6), Statistics(sizeInBytes=104.3 KiB, rowCount=2.49E+3)
+                                             :              :        +- Exchange (5)
+                                             :              :           +- * HashAggregate (4)
+                                             :              :              +- * Project (3)
+                                             :              :                 +- * ColumnarToRow (2)
+                                             :              :                    +- Scan parquet  (1)
+                                             :              +- * HashAggregate (33)
+                                             :                 +- AQEShuffleRead (32)
+                                             :                    +- ShuffleQueryStage (31), Statistics(sizeInBytes=64.0 B, rowCount=2)
+                                             :                       +- Exchange (30)
+                                             :                          +- * HashAggregate (29)
+                                             :                             +- * Project (28)
+                                             :                                +- * SortMergeJoin Inner (27)
+                                             :                                   :- * Sort (14)
+                                             :                                   :  +- AQEShuffleRead (13)
+                                             :                                   :     +- ShuffleQueryStage (12), Statistics(sizeInBytes=34.1 KiB, rowCount=2.18E+3)
+                                             :                                   :        +- Exchange (11)
+                                             :                                   :           +- * Generate (10)
+                                             :                                   :              +- * Scan OneRowRelation (9)
+                                             :                                   +- * Filter (26)
+                                             :                                      +- SortAggregate (25)
+                                             :                                         +- * Sort (24)
+                                             :                                            +- AQEShuffleRead (23)
+                                             :                                               +- ShuffleQueryStage (22), Statistics(sizeInBytes=272.8 KiB, rowCount=8.73E+3)
+                                             :                                                  +- Exchange (21)
+                                             :                                                     +- SortAggregate (20)
+                                             :                                                        +- * Sort (19)
+                                             :                                                           +- * Project (18)
+                                             :                                                              +- * Filter (17)
+                                             :                                                                 +- * ColumnarToRow (16)
+                                             :                                                                    +- Scan parquet  (15)
+                                             +- * Sort (48)
+                                                +- * HashAggregate (47)
+                                                   +- AQEShuffleRead (46)
+                                                      +- ShuffleQueryStage (45), Statistics(sizeInBytes=184.3 KiB, rowCount=4.72E+3)
+                                                         +- Exchange (44)
+                                                            +- * HashAggregate (43)
+                                                               +- * Project (42)
+                                                                  +- * Filter (41)
+                                                                     +- * ColumnarToRow (40)
+                                                                        +- Scan parquet  (39)
++- == Initial Plan ==
+   Sort (102)
+   +- Window (101)
+      +- Sort (100)
+         +- Exchange (99)
+            +- Project (98)
+               +- Filter (97)
+                  +- HashAggregate (96)
+                     +- Exchange (95)
+                        +- HashAggregate (94)
+                           +- Project (93)
+                              +- SortMergeJoin LeftOuter (92)
+                                 :- Sort (85)
+                                 :  +- Exchange (84)
+                                 :     +- CartesianProduct Inner (83)
+                                 :        :- HashAggregate (67)
+                                 :        :  +- Exchange (66)
+                                 :        :     +- HashAggregate (65)
+                                 :        :        +- Project (64)
+                                 :        :           +- Scan parquet  (1)
+                                 :        +- HashAggregate (82)
+                                 :           +- Exchange (81)
+                                 :              +- HashAggregate (80)
+                                 :                 +- Project (79)
+                                 :                    +- SortMergeJoin Inner (78)
+                                 :                       :- Sort (69)
+                                 :                       :  +- Exchange (68)
+                                 :                       :     +- Generate (10)
+                                 :                       :        +- Scan OneRowRelation (9)
+                                 :                       +- Filter (77)
+                                 :                          +- SortAggregate (76)
+                                 :                             +- Sort (75)
+                                 :                                +- Exchange (74)
+                                 :                                   +- SortAggregate (73)
+                                 :                                      +- Sort (72)
+                                 :                                         +- Project (71)
+                                 :                                            +- Filter (70)
+                                 :                                               +- Scan parquet  (15)
+                                 +- Sort (91)
+                                    +- HashAggregate (90)
+                                       +- Exchange (89)
+                                          +- HashAggregate (88)
+                                             +- Project (87)
+                                                +- Filter (86)
+                                                   +- Scan parquet  (39)
+
+
+(1) Scan parquet 
+Output [4]: [pickup_location_id#38420, pickup_zone#38442, pickup_year#38435, pickup_month#38436]
+Batched: true
+Location: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/integrated_taxi_trips]
+ReadSchema: struct<pickup_location_id:int,pickup_zone:string>
+
+(2) ColumnarToRow [codegen id : 1]
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, pickup_year#38435, pickup_month#38436]
+
+(3) Project [codegen id : 1]
+Output [2]: [pickup_location_id#38420, pickup_zone#38442]
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, pickup_year#38435, pickup_month#38436]
+
+(4) HashAggregate [codegen id : 1]
+Input [2]: [pickup_location_id#38420, pickup_zone#38442]
+Keys [2]: [pickup_location_id#38420, pickup_zone#38442]
+Functions: []
+Aggregate Attributes: []
+Results [2]: [pickup_location_id#38420, pickup_zone#38442]
+
+(5) Exchange
+Input [2]: [pickup_location_id#38420, pickup_zone#38442]
+Arguments: hashpartitioning(pickup_location_id#38420, pickup_zone#38442, 8), ENSURE_REQUIREMENTS, [plan_id=21029]
+
+(6) ShuffleQueryStage
+Output [2]: [pickup_location_id#38420, pickup_zone#38442]
+Arguments: 0
+
+(7) AQEShuffleRead
+Input [2]: [pickup_location_id#38420, pickup_zone#38442]
+Arguments: coalesced
+
+(8) HashAggregate [codegen id : 9]
+Input [2]: [pickup_location_id#38420, pickup_zone#38442]
+Keys [2]: [pickup_location_id#38420, pickup_zone#38442]
+Functions: []
+Aggregate Attributes: []
+Results [2]: [pickup_location_id#38420, pickup_zone#38442]
+
+(9) Scan OneRowRelation [codegen id : 2]
+Output: []
+Arguments: ParallelCollectionRDD[195] at save at NativeMethodAccessorImpl.java:0, OneRowRelation, UnknownPartitioning(0)
+
+(10) Generate [codegen id : 2]
+Input: []
+Arguments: explode(org.apache.spark.sql.catalyst.expressions.UnsafeArrayData@4d864f25), false, [hour_utc#38472]
+
+(11) Exchange
+Input [1]: [hour_utc#38472]
+Arguments: hashpartitioning(hour_utc#38472, 8), ENSURE_REQUIREMENTS, [plan_id=21042]
+
+(12) ShuffleQueryStage
+Output [1]: [hour_utc#38472]
+Arguments: 1
+
+(13) AQEShuffleRead
+Input [1]: [hour_utc#38472]
+Arguments: coalesced
+
+(14) Sort [codegen id : 5]
+Input [1]: [hour_utc#38472]
+Arguments: [hour_utc#38472 ASC NULLS FIRST], false, 0
+
+(15) Scan parquet 
+Output [5]: [pickup_datetime#38477, pickup_precipitation_mm#38509, pickup_weather_matched#38514, pickup_year#38498, pickup_month#38499]
+Batched: true
+Location: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/integrated_taxi_trips]
+ReadSchema: struct<pickup_datetime:timestamp,pickup_precipitation_mm:double,pickup_weather_matched:boolean>
+
+(16) ColumnarToRow [codegen id : 3]
+Input [5]: [pickup_datetime#38477, pickup_precipitation_mm#38509, pickup_weather_matched#38514, pickup_year#38498, pickup_month#38499]
+
+(17) Filter [codegen id : 3]
+Input [5]: [pickup_datetime#38477, pickup_precipitation_mm#38509, pickup_weather_matched#38514, pickup_year#38498, pickup_month#38499]
+Condition : isnotnull(date_trunc(hour, pickup_datetime#38477, Some(UTC)))
+
+(18) Project [codegen id : 3]
+Output [2]: [date_trunc(hour, pickup_datetime#38477, Some(UTC)) AS hour_utc#38533, CASE WHEN (pickup_weather_matched#38514 AND (pickup_precipitation_mm#38509 > 0.0)) THEN wet WHEN (pickup_weather_matched#38514 AND (pickup_precipitation_mm#38509 = 0.0)) THEN dry ELSE unknown END AS weather#38534]
+Input [5]: [pickup_datetime#38477, pickup_precipitation_mm#38509, pickup_weather_matched#38514, pickup_year#38498, pickup_month#38499]
+
+(19) Sort [codegen id : 3]
+Input [2]: [hour_utc#38533, weather#38534]
+Arguments: [hour_utc#38533 ASC NULLS FIRST], false, 0
+
+(20) SortAggregate
+Input [2]: [hour_utc#38533, weather#38534]
+Keys [1]: [hour_utc#38533]
+Functions [1]: [partial_max(weather#38534)]
+Aggregate Attributes [1]: [max#38829]
+Results [2]: [hour_utc#38533, max#38830]
+
+(21) Exchange
+Input [2]: [hour_utc#38533, max#38830]
+Arguments: hashpartitioning(hour_utc#38533, 8), ENSURE_REQUIREMENTS, [plan_id=21061]
+
+(22) ShuffleQueryStage
+Output [2]: [hour_utc#38533, max#38830]
+Arguments: 2
+
+(23) AQEShuffleRead
+Input [2]: [hour_utc#38533, max#38830]
+Arguments: coalesced
+
+(24) Sort [codegen id : 6]
+Input [2]: [hour_utc#38533, max#38830]
+Arguments: [hour_utc#38533 ASC NULLS FIRST], false, 0
+
+(25) SortAggregate
+Input [2]: [hour_utc#38533, max#38830]
+Keys [1]: [hour_utc#38533]
+Functions [1]: [max(weather#38534)]
+Aggregate Attributes [1]: [max(weather#38534)#895]
+Results [2]: [hour_utc#38533, max(weather#38534)#895 AS weather#38541]
+
+(26) Filter [codegen id : 7]
+Input [2]: [hour_utc#38533, weather#38541]
+Condition : coalesce(weather#38541, unknown) IN (dry,wet)
+
+(27) SortMergeJoin [codegen id : 8]
+Left keys [1]: [hour_utc#38472]
+Right keys [1]: [hour_utc#38533]
+Join type: Inner
+Join condition: None
+
+(28) Project [codegen id : 8]
+Output [1]: [coalesce(weather#38541, unknown) AS weather#38543]
+Input [3]: [hour_utc#38472, hour_utc#38533, weather#38541]
+
+(29) HashAggregate [codegen id : 8]
+Input [1]: [weather#38543]
+Keys [1]: [weather#38543]
+Functions [1]: [partial_count(1)]
+Aggregate Attributes [1]: [count#6702L]
+Results [2]: [weather#38543, count#6703L]
+
+(30) Exchange
+Input [2]: [weather#38543, count#6703L]
+Arguments: hashpartitioning(weather#38543, 8), ENSURE_REQUIREMENTS, [plan_id=21490]
+
+(31) ShuffleQueryStage
+Output [2]: [weather#38543, count#6703L]
+Arguments: 4
+
+(32) AQEShuffleRead
+Input [2]: [weather#38543, count#6703L]
+Arguments: coalesced
+
+(33) HashAggregate [codegen id : 10]
+Input [2]: [weather#38543, count#6703L]
+Keys [1]: [weather#38543]
+Functions [1]: [count(1)]
+Aggregate Attributes [1]: [count(1)#1021L]
+Results [2]: [weather#38543, count(1)#1021L AS observed_hours#38544L]
+
+(34) CartesianProduct
+Join type: Inner
+Join condition: None
+
+(35) Exchange
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, weather#38543, observed_hours#38544L]
+Arguments: hashpartitioning(pickup_location_id#38420, weather#38543, 8), ENSURE_REQUIREMENTS, [plan_id=21617]
+
+(36) ShuffleQueryStage
+Output [4]: [pickup_location_id#38420, pickup_zone#38442, weather#38543, observed_hours#38544L]
+Arguments: 5
+
+(37) AQEShuffleRead
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, weather#38543, observed_hours#38544L]
+Arguments: coalesced
+
+(38) Sort [codegen id : 11]
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, weather#38543, observed_hours#38544L]
+Arguments: [pickup_location_id#38420 ASC NULLS FIRST, weather#38543 ASC NULLS FIRST], false, 0
+
+(39) Scan parquet 
+Output [5]: [pickup_location_id#38552, pickup_precipitation_mm#38578, pickup_weather_matched#38583, pickup_year#38567, pickup_month#38568]
+Batched: true
+Location: PreparedDeltaFileIndex [file:/C:/Users/horva/Desktop/KTH/data_intensive_computing/ai_solution/storage/delta/silver/integrated_taxi_trips]
+PushedFilters: [IsNotNull(pickup_location_id)]
+ReadSchema: struct<pickup_location_id:int,pickup_precipitation_mm:double,pickup_weather_matched:boolean>
+
+(40) ColumnarToRow [codegen id : 4]
+Input [5]: [pickup_location_id#38552, pickup_precipitation_mm#38578, pickup_weather_matched#38583, pickup_year#38567, pickup_month#38568]
+
+(41) Filter [codegen id : 4]
+Input [5]: [pickup_location_id#38552, pickup_precipitation_mm#38578, pickup_weather_matched#38583, pickup_year#38567, pickup_month#38568]
+Condition : (CASE WHEN (pickup_weather_matched#38583 AND (pickup_precipitation_mm#38578 > 0.0)) THEN wet WHEN (pickup_weather_matched#38583 AND (pickup_precipitation_mm#38578 = 0.0)) THEN dry ELSE unknown END IN (dry,wet) AND isnotnull(pickup_location_id#38552))
+
+(42) Project [codegen id : 4]
+Output [2]: [pickup_location_id#38552, CASE WHEN (pickup_weather_matched#38583 AND (pickup_precipitation_mm#38578 > 0.0)) THEN wet WHEN (pickup_weather_matched#38583 AND (pickup_precipitation_mm#38578 = 0.0)) THEN dry ELSE unknown END AS weather#38603]
+Input [5]: [pickup_location_id#38552, pickup_precipitation_mm#38578, pickup_weather_matched#38583, pickup_year#38567, pickup_month#38568]
+
+(43) HashAggregate [codegen id : 4]
+Input [2]: [pickup_location_id#38552, weather#38603]
+Keys [2]: [pickup_location_id#38552, weather#38603]
+Functions [1]: [partial_count(1)]
+Aggregate Attributes [1]: [count#6706L]
+Results [3]: [pickup_location_id#38552, weather#38603, count#6709L]
+
+(44) Exchange
+Input [3]: [pickup_location_id#38552, weather#38603, count#6709L]
+Arguments: hashpartitioning(pickup_location_id#38552, weather#38603, 8), ENSURE_REQUIREMENTS, [plan_id=21098]
+
+(45) ShuffleQueryStage
+Output [3]: [pickup_location_id#38552, weather#38603, count#6709L]
+Arguments: 3
+
+(46) AQEShuffleRead
+Input [3]: [pickup_location_id#38552, weather#38603, count#6709L]
+Arguments: coalesced
+
+(47) HashAggregate [codegen id : 12]
+Input [3]: [pickup_location_id#38552, weather#38603, count#6709L]
+Keys [2]: [pickup_location_id#38552, weather#38603]
+Functions [1]: [count(1)]
+Aggregate Attributes [1]: [count(1)#1022L]
+Results [3]: [pickup_location_id#38552, weather#38603, count(1)#1022L AS trip_count#38604L]
+
+(48) Sort [codegen id : 12]
+Input [3]: [pickup_location_id#38552, weather#38603, trip_count#38604L]
+Arguments: [pickup_location_id#38552 ASC NULLS FIRST, weather#38603 ASC NULLS FIRST], false, 0
+
+(49) SortMergeJoin [codegen id : 13]
+Left keys [2]: [pickup_location_id#38420, weather#38543]
+Right keys [2]: [pickup_location_id#38552, weather#38603]
+Join type: LeftOuter
+Join condition: None
+
+(50) Project [codegen id : 13]
+Output [4]: [pickup_location_id#38420, pickup_zone#38442, (cast(coalesce(trip_count#38604L, 0) as double) / cast(observed_hours#38544L as double)) AS demand_per_hour#38613, observed_hours#38544L]
+Input [7]: [pickup_location_id#38420, pickup_zone#38442, weather#38543, observed_hours#38544L, pickup_location_id#38552, weather#38603, trip_count#38604L]
+
+(51) HashAggregate [codegen id : 13]
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, demand_per_hour#38613, observed_hours#38544L]
+Keys [2]: [pickup_location_id#38420, pickup_zone#38442]
+Functions [4]: [partial_max(demand_per_hour#38613), partial_min(demand_per_hour#38613), partial_min(observed_hours#38544L), partial_count(1)]
+Aggregate Attributes [4]: [max#38821, min#38822, min#38823L, count#38824L]
+Results [6]: [pickup_location_id#38420, pickup_zone#38442, max#38825, min#38826, min#38827L, count#38828L]
+
+(52) Exchange
+Input [6]: [pickup_location_id#38420, pickup_zone#38442, max#38825, min#38826, min#38827L, count#38828L]
+Arguments: hashpartitioning(pickup_location_id#38420, pickup_zone#38442, 8), ENSURE_REQUIREMENTS, [plan_id=21725]
+
+(53) ShuffleQueryStage
+Output [6]: [pickup_location_id#38420, pickup_zone#38442, max#38825, min#38826, min#38827L, count#38828L]
+Arguments: 6
+
+(54) AQEShuffleRead
+Input [6]: [pickup_location_id#38420, pickup_zone#38442, max#38825, min#38826, min#38827L, count#38828L]
+Arguments: coalesced
+
+(55) HashAggregate [codegen id : 14]
+Input [6]: [pickup_location_id#38420, pickup_zone#38442, max#38825, min#38826, min#38827L, count#38828L]
+Keys [2]: [pickup_location_id#38420, pickup_zone#38442]
+Functions [4]: [max(demand_per_hour#38613), min(demand_per_hour#38613), min(observed_hours#38544L), count(1)]
+Aggregate Attributes [4]: [max(demand_per_hour#38613)#37666, min(demand_per_hour#38613)#37667, min(observed_hours#38544L)#37668L, count(1)#37659L]
+Results [5]: [pickup_location_id#38420, pickup_zone#38442, (max(demand_per_hour#38613)#37666 - min(demand_per_hour#38613)#37667) AS demand_range#38615, min(observed_hours#38544L)#37668L AS minimum_exposure_hours#38616L, count(1)#37659L AS count(1)#38617L]
+
+(56) Filter [codegen id : 14]
+Input [5]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L, count(1)#38617L]
+Condition : (count(1)#38617L = 2)
+
+(57) Project [codegen id : 14]
+Output [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Input [5]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L, count(1)#38617L]
+
+(58) Exchange
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Arguments: SinglePartition, ENSURE_REQUIREMENTS, [plan_id=21791]
+
+(59) ShuffleQueryStage
+Output [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Arguments: 7
+
+(60) Sort [codegen id : 15]
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Arguments: [demand_range#38615 DESC NULLS LAST], false, 0
+
+(61) Window
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Arguments: [dense_rank(demand_range#38615) windowspecdefinition(demand_range#38615 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS demand_rank#37655], [demand_range#38615 DESC NULLS LAST]
+
+(62) Sort [codegen id : 16]
+Input [5]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L, demand_rank#37655]
+Arguments: [demand_rank#37655 ASC NULLS FIRST, pickup_location_id#38420 ASC NULLS FIRST], true, 0
+
+(63) ResultQueryStage
+Output [5]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L, demand_rank#37655]
+Arguments: 8
+
+(64) Project
+Output [2]: [pickup_location_id#38420, pickup_zone#38442]
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, pickup_year#38435, pickup_month#38436]
+
+(65) HashAggregate
+Input [2]: [pickup_location_id#38420, pickup_zone#38442]
+Keys [2]: [pickup_location_id#38420, pickup_zone#38442]
+Functions: []
+Aggregate Attributes: []
+Results [2]: [pickup_location_id#38420, pickup_zone#38442]
+
+(66) Exchange
+Input [2]: [pickup_location_id#38420, pickup_zone#38442]
+Arguments: hashpartitioning(pickup_location_id#38420, pickup_zone#38442, 8), ENSURE_REQUIREMENTS, [plan_id=20905]
+
+(67) HashAggregate
+Input [2]: [pickup_location_id#38420, pickup_zone#38442]
+Keys [2]: [pickup_location_id#38420, pickup_zone#38442]
+Functions: []
+Aggregate Attributes: []
+Results [2]: [pickup_location_id#38420, pickup_zone#38442]
+
+(68) Exchange
+Input [1]: [hour_utc#38472]
+Arguments: hashpartitioning(hour_utc#38472, 8), ENSURE_REQUIREMENTS, [plan_id=20916]
+
+(69) Sort
+Input [1]: [hour_utc#38472]
+Arguments: [hour_utc#38472 ASC NULLS FIRST], false, 0
+
+(70) Filter
+Input [5]: [pickup_datetime#38477, pickup_precipitation_mm#38509, pickup_weather_matched#38514, pickup_year#38498, pickup_month#38499]
+Condition : isnotnull(date_trunc(hour, pickup_datetime#38477, Some(UTC)))
+
+(71) Project
+Output [2]: [date_trunc(hour, pickup_datetime#38477, Some(UTC)) AS hour_utc#38533, CASE WHEN (pickup_weather_matched#38514 AND (pickup_precipitation_mm#38509 > 0.0)) THEN wet WHEN (pickup_weather_matched#38514 AND (pickup_precipitation_mm#38509 = 0.0)) THEN dry ELSE unknown END AS weather#38534]
+Input [5]: [pickup_datetime#38477, pickup_precipitation_mm#38509, pickup_weather_matched#38514, pickup_year#38498, pickup_month#38499]
+
+(72) Sort
+Input [2]: [hour_utc#38533, weather#38534]
+Arguments: [hour_utc#38533 ASC NULLS FIRST], false, 0
+
+(73) SortAggregate
+Input [2]: [hour_utc#38533, weather#38534]
+Keys [1]: [hour_utc#38533]
+Functions [1]: [partial_max(weather#38534)]
+Aggregate Attributes [1]: [max#38829]
+Results [2]: [hour_utc#38533, max#38830]
+
+(74) Exchange
+Input [2]: [hour_utc#38533, max#38830]
+Arguments: hashpartitioning(hour_utc#38533, 8), ENSURE_REQUIREMENTS, [plan_id=20910]
+
+(75) Sort
+Input [2]: [hour_utc#38533, max#38830]
+Arguments: [hour_utc#38533 ASC NULLS FIRST], false, 0
+
+(76) SortAggregate
+Input [2]: [hour_utc#38533, max#38830]
+Keys [1]: [hour_utc#38533]
+Functions [1]: [max(weather#38534)]
+Aggregate Attributes [1]: [max(weather#38534)#895]
+Results [2]: [hour_utc#38533, max(weather#38534)#895 AS weather#38541]
+
+(77) Filter
+Input [2]: [hour_utc#38533, weather#38541]
+Condition : coalesce(weather#38541, unknown) IN (dry,wet)
+
+(78) SortMergeJoin
+Left keys [1]: [hour_utc#38472]
+Right keys [1]: [hour_utc#38533]
+Join type: Inner
+Join condition: None
+
+(79) Project
+Output [1]: [coalesce(weather#38541, unknown) AS weather#38543]
+Input [3]: [hour_utc#38472, hour_utc#38533, weather#38541]
+
+(80) HashAggregate
+Input [1]: [weather#38543]
+Keys [1]: [weather#38543]
+Functions [1]: [partial_count(1)]
+Aggregate Attributes [1]: [count#6702L]
+Results [2]: [weather#38543, count#6703L]
+
+(81) Exchange
+Input [2]: [weather#38543, count#6703L]
+Arguments: hashpartitioning(weather#38543, 8), ENSURE_REQUIREMENTS, [plan_id=20922]
+
+(82) HashAggregate
+Input [2]: [weather#38543, count#6703L]
+Keys [1]: [weather#38543]
+Functions [1]: [count(1)]
+Aggregate Attributes [1]: [count(1)#1021L]
+Results [2]: [weather#38543, count(1)#1021L AS observed_hours#38544L]
+
+(83) CartesianProduct
+Join type: Inner
+Join condition: None
+
+(84) Exchange
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, weather#38543, observed_hours#38544L]
+Arguments: hashpartitioning(pickup_location_id#38420, weather#38543, 8), ENSURE_REQUIREMENTS, [plan_id=20929]
+
+(85) Sort
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, weather#38543, observed_hours#38544L]
+Arguments: [pickup_location_id#38420 ASC NULLS FIRST, weather#38543 ASC NULLS FIRST], false, 0
+
+(86) Filter
+Input [5]: [pickup_location_id#38552, pickup_precipitation_mm#38578, pickup_weather_matched#38583, pickup_year#38567, pickup_month#38568]
+Condition : (CASE WHEN (pickup_weather_matched#38583 AND (pickup_precipitation_mm#38578 > 0.0)) THEN wet WHEN (pickup_weather_matched#38583 AND (pickup_precipitation_mm#38578 = 0.0)) THEN dry ELSE unknown END IN (dry,wet) AND isnotnull(pickup_location_id#38552))
+
+(87) Project
+Output [2]: [pickup_location_id#38552, CASE WHEN (pickup_weather_matched#38583 AND (pickup_precipitation_mm#38578 > 0.0)) THEN wet WHEN (pickup_weather_matched#38583 AND (pickup_precipitation_mm#38578 = 0.0)) THEN dry ELSE unknown END AS weather#38603]
+Input [5]: [pickup_location_id#38552, pickup_precipitation_mm#38578, pickup_weather_matched#38583, pickup_year#38567, pickup_month#38568]
+
+(88) HashAggregate
+Input [2]: [pickup_location_id#38552, weather#38603]
+Keys [2]: [pickup_location_id#38552, weather#38603]
+Functions [1]: [partial_count(1)]
+Aggregate Attributes [1]: [count#6706L]
+Results [3]: [pickup_location_id#38552, weather#38603, count#6709L]
+
+(89) Exchange
+Input [3]: [pickup_location_id#38552, weather#38603, count#6709L]
+Arguments: hashpartitioning(pickup_location_id#38552, weather#38603, 8), ENSURE_REQUIREMENTS, [plan_id=20925]
+
+(90) HashAggregate
+Input [3]: [pickup_location_id#38552, weather#38603, count#6709L]
+Keys [2]: [pickup_location_id#38552, weather#38603]
+Functions [1]: [count(1)]
+Aggregate Attributes [1]: [count(1)#1022L]
+Results [3]: [pickup_location_id#38552, weather#38603, count(1)#1022L AS trip_count#38604L]
+
+(91) Sort
+Input [3]: [pickup_location_id#38552, weather#38603, trip_count#38604L]
+Arguments: [pickup_location_id#38552 ASC NULLS FIRST, weather#38603 ASC NULLS FIRST], false, 0
+
+(92) SortMergeJoin
+Left keys [2]: [pickup_location_id#38420, weather#38543]
+Right keys [2]: [pickup_location_id#38552, weather#38603]
+Join type: LeftOuter
+Join condition: None
+
+(93) Project
+Output [4]: [pickup_location_id#38420, pickup_zone#38442, (cast(coalesce(trip_count#38604L, 0) as double) / cast(observed_hours#38544L as double)) AS demand_per_hour#38613, observed_hours#38544L]
+Input [7]: [pickup_location_id#38420, pickup_zone#38442, weather#38543, observed_hours#38544L, pickup_location_id#38552, weather#38603, trip_count#38604L]
+
+(94) HashAggregate
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, demand_per_hour#38613, observed_hours#38544L]
+Keys [2]: [pickup_location_id#38420, pickup_zone#38442]
+Functions [4]: [partial_max(demand_per_hour#38613), partial_min(demand_per_hour#38613), partial_min(observed_hours#38544L), partial_count(1)]
+Aggregate Attributes [4]: [max#38821, min#38822, min#38823L, count#38824L]
+Results [6]: [pickup_location_id#38420, pickup_zone#38442, max#38825, min#38826, min#38827L, count#38828L]
+
+(95) Exchange
+Input [6]: [pickup_location_id#38420, pickup_zone#38442, max#38825, min#38826, min#38827L, count#38828L]
+Arguments: hashpartitioning(pickup_location_id#38420, pickup_zone#38442, 8), ENSURE_REQUIREMENTS, [plan_id=20936]
+
+(96) HashAggregate
+Input [6]: [pickup_location_id#38420, pickup_zone#38442, max#38825, min#38826, min#38827L, count#38828L]
+Keys [2]: [pickup_location_id#38420, pickup_zone#38442]
+Functions [4]: [max(demand_per_hour#38613), min(demand_per_hour#38613), min(observed_hours#38544L), count(1)]
+Aggregate Attributes [4]: [max(demand_per_hour#38613)#37666, min(demand_per_hour#38613)#37667, min(observed_hours#38544L)#37668L, count(1)#37659L]
+Results [5]: [pickup_location_id#38420, pickup_zone#38442, (max(demand_per_hour#38613)#37666 - min(demand_per_hour#38613)#37667) AS demand_range#38615, min(observed_hours#38544L)#37668L AS minimum_exposure_hours#38616L, count(1)#37659L AS count(1)#38617L]
+
+(97) Filter
+Input [5]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L, count(1)#38617L]
+Condition : (count(1)#38617L = 2)
+
+(98) Project
+Output [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Input [5]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L, count(1)#38617L]
+
+(99) Exchange
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Arguments: SinglePartition, ENSURE_REQUIREMENTS, [plan_id=20941]
+
+(100) Sort
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Arguments: [demand_range#38615 DESC NULLS LAST], false, 0
+
+(101) Window
+Input [4]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L]
+Arguments: [dense_rank(demand_range#38615) windowspecdefinition(demand_range#38615 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS demand_rank#37655], [demand_range#38615 DESC NULLS LAST]
+
+(102) Sort
+Input [5]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L, demand_rank#37655]
+Arguments: [demand_rank#37655 ASC NULLS FIRST, pickup_location_id#38420 ASC NULLS FIRST], true, 0
+
+(103) AdaptiveSparkPlan
+Output [5]: [pickup_location_id#38420, pickup_zone#38442, demand_range#38615, minimum_exposure_hours#38616L, demand_rank#37655]
+Arguments: isFinalPlan=true
+

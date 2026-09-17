@@ -2,28 +2,32 @@
 
 Start with [silver/monthly_zone_demand.sql](silver/monthly_zone_demand.sql). It is a complete query that counts trips by month and pickup zone.
 
-| Folder | Purpose |
+## What belongs in a SQL file?
+
+Keep the six analytical queries in separate files so they can be read and compared independently. Keep substantial reusable transformations here too. Only very short statements, such as an existence check or a one-line view copy, stay in Python.
+
+| Folder | Contents |
 |---|---|
-| `views/` | Prepare shared inputs, the hourly calendar and coverage statistics. |
-| `silver/` | Answer the six analytical questions from detailed data. |
-| `products/` | Define the four aggregations saved as Gold tables. |
-| `gold/` | Answer the same six questions using those saved summaries. |
-| `benchmarks/` | Define the monthly-filter and zone-join comparisons. Caching and AQE reuse Silver queries. |
+| `silver/` | Six analytical queries over detailed data. |
+| `gold/` | Six equivalent analytical queries over saved summaries. |
+| `products/` | Daily mobility and taxi-zone aggregations. |
+| `views/` | Input projection, coverage, the hourly calendar, hourly demand and weather exposure. |
+| `benchmarks/` | Scoped trip input, hourly context lookup and joined trip input templates. |
 
-Silver and Gold queries have matching filenames. Compare a pair to see how preaggregation changes the work needed to produce the same answer.
+Silver and Gold queries use matching filenames.
 
-## Loading and running
+## What stays in Python?
 
-[sql_files.py](../sql_files.py) reads files relative to its own location, so loading does not depend on the current working directory. Python registers the temporary views, reads the SQL and passes it to Spark. Files are loaded outside benchmark timers.
+- [analysis.py](../analysis.py) loads the shared view definitions from SQL files.
+- [products.py](../products.py) keeps the two simple `SELECT *` view copies inline and loads the two larger product aggregations from files.
+- [benchmark.py](../benchmark.py) keeps cache commands and the short empty-month check in Python. Input transformations are loaded from `benchmarks/`. All experiments reuse the six analytical SQL definitions.
 
-Most files can run directly once their input views exist. Three kinds of internal placeholders are filled by Python:
+The query dictionaries only associate names with loaded SQL. The product dictionary contains file references and the two one-line statements, not large SQL bodies.
 
-- `views/calendar_hours.sql` uses `{start}` and `{end}` from the observed date coverage.
-- The monthly benchmark files use `{month_start}` from a validated date. `monthly_pickups.sql` also uses `{partition_filter}` for an empty string or the explicit year/month predicates.
-- `benchmarks/zone_join.sql` uses `{hint}` for an empty string or the fixed broadcast hint.
+## Loading and formatting
 
-These substitutions are controlled by the runner, not arbitrary user-supplied SQL. Small operational commands such as enabling the Spark cache remain in Python.
+[sql_files.py](../sql_files.py) resolves files relative to its own location, independently of the working directory. SQL file reads and benchmark query construction happen outside the query timers.
 
-## Formatting
+The calendar SQL uses `{start}` and `{end}` placeholders supplied from observed date coverage. Benchmark templates receive a validated month and a controlled partition filter or broadcast hint from Python.
 
-Use four spaces for indentation, one selected expression per line and separate lines for major clauses. Indent common table expressions, `CASE` branches and join conditions consistently. Ruff checks Python only; it does not format these SQL files.
+Use four-space indentation, one selected expression per line and separate lines for major clauses. The same convention applies to inline SQL. Ruff checks Python formatting, but does not reformat SQL inside strings or SQL files.

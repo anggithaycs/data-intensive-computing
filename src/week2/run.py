@@ -1,5 +1,3 @@
-"""Run with: python -m src.week2.run [queries|products|benchmark|all]."""
-
 import argparse
 import json
 from datetime import datetime
@@ -12,8 +10,8 @@ from src.week2.benchmark import run_benchmarks
 from src.week2.products import GOLD_QUERIES, build_products, load_products
 
 ROOT = Path(__file__).resolve().parents[2]
-GOLD_ROOT = ROOT / "storage/delta/gold/week2_simple"
-RESULTS_ROOT = ROOT / "reports/week2_simple/runs"
+GOLD_ROOT = ROOT / "storage/delta/gold"
+RESULTS_ROOT = ROOT / "storage/metrics/week2/runs"
 
 
 def main():
@@ -56,6 +54,7 @@ def main():
             (output / "products.json").write_text(
                 json.dumps(product_metrics, indent=2), encoding="utf-8"
             )
+
         if args.command in {"queries", "all"}:
             if args.gold:
                 load_products(spark, GOLD_ROOT)
@@ -72,10 +71,12 @@ def main():
                     encoding="utf-8",
                 )
                 print(f"{name}: {len(rows)} rows; first five:", rows[:5], flush=True)
+                
         if args.command in {"benchmark", "all"}:
             run_benchmarks(
                 spark, output, product_metrics, coverage, args.repeats, args.month
             )
+            
         print(f"Results saved in {output}", flush=True)
     finally:
         stop_spark_session(spark)

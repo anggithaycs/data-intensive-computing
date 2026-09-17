@@ -14,9 +14,8 @@ from pyspark.sql import Row
 
 from src.common.spark_session import get_spark_session, stop_spark_session
 from src.week2.analysis import QUERIES, QUERY_KEYS, prepare_views
-from src.week2.benchmark import check_equal, measure
+from src.week2.benchmark import check_equal, measure, run_benchmarks
 from src.week2.products import GOLD_QUERIES, build_products
-from src.week2.sql_files import read_sql
 
 
 class ComparisonTests(unittest.TestCase):
@@ -165,44 +164,52 @@ class SparkTests(unittest.TestCase):
                 expected=result[:1],
             )
 
-    def test_focused_sql_templates_preserve_answers(self):
-        monthly_sql = read_sql("benchmarks/monthly_pickups.sql")
-        date_only = monthly_sql.format(month_start="2024-02-01", partition_filter="")
-        with_partitions = monthly_sql.format(
-            month_start="2024-02-01",
-            partition_filter="AND pickup_year = 2024 AND pickup_month = 2",
-        )
-        baseline = self.spark.sql(date_only).collect()
-        self.assertEqual(sum(row.trip_count for row in baseline), 2)
-        check_equal(
-            baseline,
-            self.spark.sql(with_partitions).collect(),
-            ["pickup_location_id"],
-        )
-
-        month_check = read_sql("benchmarks/month_has_trips.sql")
-        self.assertEqual(
-            self.spark.sql(month_check.format(month_start="2024-02-01")).count(), 1
-        )
-        self.assertEqual(
-            self.spark.sql(month_check.format(month_start="2024-03-01")).count(), 0
-        )
-
+    def test_full_benchmark_matrix_preserves_answers(self):
+        path = self.output / "partitioned_fixture"
+        self.trips.write.format("delta").partitionBy(
+            "pickup_year", "pickup_month"
+        ).save(str(path))
+        integrated = self.spark.read.format("delta").load(str(path))
+        coverage = prepare_views(self.spark, integrated)
         self.trips.createOrReplaceTempView("clean_trips")
         self.trips.selectExpr(
             "pickup_location_id AS location_id",
             "pickup_zone AS zone",
             "pickup_borough AS borough",
         ).distinct().createOrReplaceTempView("zones")
-
-        expected = self.spark.sql(QUERIES["monthly_zone_demand"]).collect()
-        join_sql = read_sql("benchmarks/zone_join.sql")
-        for hint in ("", "/*+ BROADCAST(z) */"):
-            check_equal(
-                expected,
-                self.spark.sql(join_sql.format(hint=hint)).collect(),
-                QUERY_KEYS["monthly_zone_demand"],
+        products = build_products(self.spark, self.output / "matrix_gold", "fixture")
+        previous_aqe = self.spark.conf.get("spark.sql.adaptive.enabled")
+        output = self.output / "matrix"
+        report = run_benchmarks(
+            self.spark, output, products, coverage, repeats=1, month="2024-02"
+        )
+        self.assertEqual(report["status"], "success")
+        self.assertEqual(len(report["cases"]), 48)
+        self.assertEqual(len(list((output / "plans").rglob("*.txt"))), 48)
+        for technique in (
+            "silver_gold",
+            "caching",
+            "aqe",
+            "partition_pruning",
+            "broadcast_join",
+        ):
+            self.assertEqual(set(report["comparisons"][technique]), set(QUERIES))
+            self.assertTrue(
+                all(c["equivalent"] for c in report["comparisons"][technique].values())
             )
+        self.assertTrue(
+            all(
+                c["partition_filters_present"]
+                for c in report["comparisons"]["partition_pruning"].values()
+            )
+        )
+        self.assertEqual(self.spark.table("trips").count(), 5)
+        self.assertEqual(
+            self.spark.conf.get("spark.sql.adaptive.enabled"), previous_aqe
+        )
+        self.assertEqual(self.spark.table("calendar_hours").count(), 48)
+        trends = self.spark.sql(QUERIES["monthly_demand_trends"]).collect()
+        self.assertAlmostEqual(trends[1].change_pct, -100 / 3)
 
 
 if __name__ == "__main__":

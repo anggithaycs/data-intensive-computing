@@ -51,7 +51,7 @@ For zones exposed to both dry and wet conditions, rank the absolute difference b
 
 ### SQL organization and correctness
 
-SQL files are separated into `views/`, `silver/`, `products/`, `gold/` and `benchmarks/` under `src/week2/sql/`. Matching Silver and Gold filenames make each pair easy to compare. Python handles loading, execution, table writes and timing. Small controlled placeholders supply calendar dates, the selected benchmark month and the broadcast hint.
+SQL files are organized into `silver/`, `gold/`, `products/`, `views/` and `benchmarks/` under `src/week2/sql/`. Matching Silver and Gold filenames make each pair easy to compare. Only very short checks and one-line view copies stay inline. Python handles execution, writes and timing; controlled values supply calendar bounds, partition filters and broadcast hints.
 
 Results are matched by business keys rather than row order. Integer counts and null values must agree exactly; floating-point aggregates allow relative tolerance `1e-9` and absolute tolerance `1e-8` for summation-order differences. Known-answer fixtures cover all six queries, missing observations, zero-demand hours, daylight-saving changes and ties. Product tests also check Silver/Gold equivalence and repeatable refreshes.
 

@@ -1,26 +1,12 @@
-"""Time complete query results and change one optimization at a time."""
-
 import json
 import math
 import statistics
 import time
 from pathlib import Path
 
-from src.week2.analysis import QUERIES, QUERY_KEYS
+from src.week2.analysis import QUERIES, QUERY_KEYS, prepare_derived_views
 from src.week2.products import GOLD_QUERIES
 from src.week2.sql_files import read_sql
-
-# Each file is the executed plan for one side of a focused comparison.
-PLAN_FILES = {
-    "weather_trip_distance_silver": "caching_before.txt",
-    "weather_trip_distance_cached": "caching_after.txt",
-    "month_date_filter": "partition_pruning_before.txt",
-    "month_partition_filter": "partition_pruning_after.txt",
-    "zone_join_no_broadcast": "broadcast_join_before.txt",
-    "zone_join_broadcast": "broadcast_join_after.txt",
-    "weather_demand_variation_silver": "aqe_before.txt",
-    "weather_demand_variation_aqe": "aqe_after.txt",
-}
 
 
 def check_equal(expected, actual, keys):
@@ -89,20 +75,23 @@ def measure(spark, sql, keys, repeats=5, expected=None):
 def run_benchmarks(
     spark, output, product_metrics, coverage, repeats=5, month="2024-02"
 ):
-    """Compare all six Silver/Gold queries, plus four focused experiments.
+    """Compare Silver/Gold and test each optimization on all six queries.
 
-    Do not change Silver tables during the run. Gold must have just been rebuilt.
-    The runner guarantees this by calling build_products before this function.
+    Silver must stay unchanged and Gold must have just been rebuilt. Timed
+    queries include full result collection; setup and equality checks do not.
     """
-    from datetime import date
+    from datetime import date, timedelta
 
     month_start = date.fromisoformat(month + "-01")
-
+    next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    prior_month = (month_start - timedelta(days=1)).replace(day=1)
     if repeats < 1:
         raise ValueError("repeats must be positive")
 
     output = Path(output)
-    (output / "plans").mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
+    original = spark.table("trips")
+    original.createOrReplaceTempView("benchmark_original_trips")
     settings = {
         "spark.sql.adaptive.enabled": "false",
         "spark.sql.adaptive.coalescePartitions.enabled": "false",
@@ -117,131 +106,193 @@ def run_benchmarks(
         "coverage": coverage,
         "products": product_metrics,
         "cases": {},
+        "comparisons": {},
         "spark_version": spark.version,
         "master": spark.sparkContext.master,
         "shuffle_partitions": spark.conf.get("spark.sql.shuffle.partitions"),
         "baseline_settings": settings,
     }
 
-    def record(name, sql, keys, expected=None):
+    def record(name, sql, keys, expected=None, input_sql=None):
         print(f"Benchmark: {name}", flush=True)
         stats, rows = measure(spark, sql, keys, repeats, expected)
+        if input_sql is not None:
+            stats["trips_view_sql"] = input_sql
         report["cases"][name] = stats
-
-        if name in PLAN_FILES:
-            (output / "plans" / PLAN_FILES[name]).write_text(
-                stats["final_plan"], encoding="utf-8"
-            )
-
         return rows
+
+    def compare(technique, name, before, after, scope):
+        baseline = report["cases"][before]
+        optimized = report["cases"][after]
+        comparison = {
+            "before_case": before,
+            "after_case": after,
+            "before_ms": baseline["median_ms"],
+            "after_ms": optimized["median_ms"],
+            "speedup": baseline["median_ms"] / optimized["median_ms"],
+            "equivalent": True,
+            "scope": scope,
+        }
+        if technique != "silver_gold":
+            directory = output / "plans" / technique
+            directory.mkdir(parents=True, exist_ok=True)
+            for side, stats in (("before", baseline), ("after", optimized)):
+                path = directory / f"{name}_{side}.txt"
+                path.write_text(stats["final_plan"], encoding="utf-8")
+                comparison[f"{side}_plan"] = path.relative_to(output).as_posix()
+        report["comparisons"].setdefault(technique, {})[name] = comparison
+        return comparison
+
+    def use_input(sql, date_coverage):
+        spark.sql(sql).createOrReplaceTempView("trips")
+        prepare_derived_views(spark, date_coverage)
 
     try:
         for key, value in settings.items():
             spark.conf.set(key, value)
-
         spark.catalog.clearCache()
         answers = {}
-
         for name, sql in QUERIES.items():
             answers[name] = record(name + "_silver", sql, QUERY_KEYS[name])
-
         for name, sql in GOLD_QUERIES.items():
             record(name + "_gold", sql, QUERY_KEYS[name], answers[name])
+            compare(
+                "silver_gold", name, name + "_silver", name + "_gold", "Full period"
+            )
 
-        # 1. Caching: cache the same input, keeping SQL and all other settings fixed.
+        # Populate once; all six queries reuse the same cached trip projection.
         start = time.perf_counter()
         spark.sql("CACHE TABLE trips OPTIONS ('storageLevel' 'MEMORY_AND_DISK')")
         spark.table("trips").count()
         report["cache_population_seconds"] = time.perf_counter() - start
-        name = "weather_trip_distance"
-        record(name + "_cached", QUERIES[name], QUERY_KEYS[name], answers[name])
-        cached_plan = report["cases"][name + "_cached"]["final_plan"]
-
-        if (
-            "Scan In-memory table" not in cached_plan
-            and "InMemoryTableScan" not in cached_plan
-        ):
-            raise AssertionError("Caching experiment did not use a cached scan")
-
+        for name, sql in QUERIES.items():
+            record(name + "_cached", sql, QUERY_KEYS[name], answers[name])
+            compare("caching", name, name + "_silver", name + "_cached", "Full period")
+            plan = report["cases"][name + "_cached"]["final_plan"]
+            if "Scan In-memory table" not in plan and "InMemoryTableScan" not in plan:
+                raise AssertionError(f"{name}: caching did not use a cached scan")
         spark.catalog.clearCache()
 
-        # 2. AQE: enable adaptive execution and shuffle coalescing only.
+        # AQE may coalesce shuffles; automatic broadcasting stays disabled.
         spark.conf.set("spark.sql.adaptive.enabled", "true")
         spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", "true")
-        name = "weather_demand_variation"
-        record(name + "_aqe", QUERIES[name], QUERY_KEYS[name], answers[name])
+        for name, sql in QUERIES.items():
+            record(name + "_aqe", sql, QUERY_KEYS[name], answers[name])
+            compare("aqe", name, name + "_silver", name + "_aqe", "Full period")
         spark.conf.set("spark.sql.adaptive.enabled", "false")
         spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", "false")
 
-        # 3. Pruning: identical monthly answer, with explicit partition predicates.
-        month_check_sql = read_sql("benchmarks/month_has_trips.sql").format(
-            month_start=month_start
-        )
-        if not spark.sql(month_check_sql).count():
+        # Both sides read the same dates. Trends also need the previous month.
+        if (
+            not original.where(
+                f"pickup_date >= DATE '{month_start}' AND pickup_date < DATE '{next_month}'"
+            )
+            .limit(1)
+            .count()
+        ):
             raise ValueError("Choose a benchmark month that contains trips")
+        scoped_sql = read_sql("benchmarks/scoped_trips.sql")
+        for name, sql in QUERIES.items():
+            start_date = prior_month if name == "monthly_demand_trends" else month_start
+            months = (
+                [prior_month, month_start]
+                if start_date == prior_month
+                else [month_start]
+            )
+            predicate = " OR ".join(
+                f"(pickup_year = {d.year} AND pickup_month = {d.month})" for d in months
+            )
+            before_sql = scoped_sql.format(
+                start=start_date, end=next_month, partition_filter=""
+            )
+            spark.sql(before_sql).createOrReplaceTempView("trips")
+            scoped_coverage = spark.sql(read_sql("views/coverage.sql")).first().asDict()
+            prepare_derived_views(spark, scoped_coverage)
+            before = name + "_date_filter"
+            expected = record(before, sql, QUERY_KEYS[name], input_sql=before_sql)
+            after_sql = scoped_sql.format(
+                start=start_date, end=next_month, partition_filter=f"AND ({predicate})"
+            )
+            use_input(after_sql, scoped_coverage)
+            after = name + "_partition_filter"
+            record(after, sql, QUERY_KEYS[name], expected, after_sql)
+            comparison = compare(
+                "partition_pruning",
+                name,
+                before,
+                after,
+                f"{start_date} inclusive to {next_month} exclusive; "
+                "calendar uses observed dates within this window",
+            )
+            # A plan can apply pruning without producing a speedup (e.g. file skipping).
+            comparison["partition_filters_present"] = any(
+                "PartitionFilters:" in line
+                and "pickup_year" in line
+                and "pickup_month" in line
+                for line in report["cases"][after]["final_plan"].splitlines()
+            )
+            if not comparison["partition_filters_present"]:
+                raise AssertionError(
+                    f"{name}: year/month partition filters are missing"
+                )
 
-        monthly_sql = read_sql("benchmarks/monthly_pickups.sql")
-        expected = record(
-            "month_date_filter",
-            monthly_sql.format(month_start=month_start, partition_filter=""),
-            ["pickup_location_id"],
+        # Reconstruct the integrated input with small zone and hourly lookups.
+        # The shared lookup preparation cost is separate from both join timings.
+        original.createOrReplaceTempView("trips")
+        prepare_derived_views(spark, coverage)
+        context_sql = read_sql("benchmarks/hourly_context.sql")
+        spark.sql(context_sql).createOrReplaceTempView("benchmark_hourly_context")
+        start = time.perf_counter()
+        spark.sql("CACHE TABLE benchmark_hourly_context")
+        spark.table("benchmark_hourly_context").count()
+        report["broadcast_lookup_population_seconds"] = time.perf_counter() - start
+        report["broadcast_context_sql"] = context_sql
+        report["broadcast_scope"] = (
+            "Full period, clean trips joined to zones and an hourly weather/PM2.5 "
+            "lookup derived from integrated trips. Both sides reuse the materialized "
+            "lookup. Each answer is also checked against integrated Silver."
         )
-
-        record(
-            "month_partition_filter",
-            monthly_sql.format(
-                month_start=month_start,
-                partition_filter=(
-                    f"AND pickup_year = {month_start.year} AND pickup_month = {month_start.month}"
-                ),
-            ),
-            ["pickup_location_id"],
-            expected,
-        )
-
-        # 4. Broadcast: use underlying Silver taxi + zone tables, not enriched trips.
-        join_sql = read_sql("benchmarks/zone_join.sql")
-        keys = QUERY_KEYS["monthly_zone_demand"]
-        expected = record(
-            "zone_join_no_broadcast",
-            join_sql.format(hint=""),
-            keys,
-            answers["monthly_zone_demand"],
-        )
-        record(
-            "zone_join_broadcast",
-            join_sql.format(hint="/*+ BROADCAST(z) */"),
-            keys,
-            expected,
-        )
-
-        if (
-            "BroadcastHashJoin"
-            in report["cases"]["zone_join_no_broadcast"]["final_plan"]
+        join_sql = read_sql("benchmarks/trips_from_sources.sql")
+        for suffix, hint in (
+            ("no_broadcast", ""),
+            ("broadcast", "/*+ BROADCAST(z, c) */"),
         ):
-            raise AssertionError("Baseline join unexpectedly used broadcast")
-
-        if (
-            "BroadcastHashJoin"
-            not in report["cases"]["zone_join_broadcast"]["final_plan"]
-        ):
-            raise AssertionError("Broadcast hint did not produce the expected join")
-
+            input_sql = join_sql.format(hint=hint)
+            use_input(input_sql, coverage)
+            for name, sql in QUERIES.items():
+                case = name + "_" + suffix
+                record(case, sql, QUERY_KEYS[name], answers[name], input_sql)
+                plan = report["cases"][case]["final_plan"]
+                if ("BroadcastHashJoin" in plan) != bool(hint):
+                    raise AssertionError(f"{case}: unexpected broadcast join strategy")
+                if hint:
+                    compare(
+                        "broadcast_join",
+                        name,
+                        name + "_no_broadcast",
+                        case,
+                        report["broadcast_scope"],
+                    )
         report["status"] = "success"
-
     except Exception as error:
         report.update(status="failed", error=str(error))
         raise
     finally:
-        # Even a failed experiment leaves its completed measurements for inspection.
-        (output / "metrics.json").write_text(
-            json.dumps(report, indent=2, default=str, allow_nan=False), encoding="utf-8"
-        )
-        spark.catalog.clearCache()
-        for key, value in previous.items():
-            if value is None:
-                spark.conf.unset(key)
-            else:
-                spark.conf.set(key, value)
-
+        # Keep completed evidence on failure and restore the analytical session.
+        try:
+            (output / "metrics.json").write_text(
+                json.dumps(report, indent=2, default=str, allow_nan=False),
+                encoding="utf-8",
+            )
+        finally:
+            spark.catalog.clearCache()
+            original.createOrReplaceTempView("trips")
+            prepare_derived_views(spark, coverage)
+            for view in ("benchmark_original_trips", "benchmark_hourly_context"):
+                spark.catalog.dropTempView(view)
+            for key, value in previous.items():
+                if value is None:
+                    spark.conf.unset(key)
+                else:
+                    spark.conf.set(key, value)
     return report

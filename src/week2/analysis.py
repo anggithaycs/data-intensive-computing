@@ -1,5 +1,3 @@
-"""Prepare shared views and load the six Silver queries from SQL files."""
-
 from src.week2.sql_files import read_sql
 
 # These identify rows when comparing answers, regardless of output ordering.
@@ -17,10 +15,8 @@ QUERIES = {name: read_sql(f"silver/{name}.sql") for name in QUERY_KEYS}
 
 def prepare_views(spark, integrated):
     """Register the input and shared views used by the analytical queries.
-
-    Week 1 guarantees one row per trip and consistent citywide context per hour.
-    The input must be a complete release covering its first through last date.
     """
+
     if spark.conf.get("spark.sql.session.timeZone") != "UTC":
         raise ValueError("Use a UTC Spark session, as configured in Week 1")
 
@@ -31,7 +27,13 @@ def prepare_views(spark, integrated):
     if not coverage["trip_count"] or coverage["first_date"] is None:
         raise ValueError("Run Week 1 first: the integrated input is empty")
 
-    # Generate real UTC hours between local midnights. DST days have 23 or 25 hours.
+    prepare_derived_views(spark, coverage)
+    return coverage
+
+
+def prepare_derived_views(spark, coverage):
+    """Rebuild dependent views after changing the trips input or date scope."""
+
     calendar_sql = read_sql("views/calendar_hours.sql").format(
         start=coverage["first_date"],
         end=coverage["last_date"],
@@ -40,5 +42,3 @@ def prepare_views(spark, integrated):
 
     for name in ("hourly_demand", "zone_weather"):
         spark.sql(read_sql(f"views/{name}.sql")).createOrReplaceTempView(name)
-
-    return coverage

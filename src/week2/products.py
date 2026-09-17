@@ -1,5 +1,3 @@
-"""Build the four Gold products and load their analytical SQL queries."""
-
 import time
 from pathlib import Path
 
@@ -9,12 +7,12 @@ from pyspark.sql import functions as F
 from src.week2.analysis import QUERY_KEYS
 from src.week2.sql_files import read_sql
 
-PRODUCTS = (
-    "daily_mobility_summary",
-    "taxi_zone_statistics",
-    "weather_impact_summary",
-    "air_quality_impact_summary",
-)
+PRODUCTS = {
+    "daily_mobility_summary": read_sql("products/daily_mobility_summary.sql"),
+    "taxi_zone_statistics": read_sql("products/taxi_zone_statistics.sql"),
+    "weather_impact_summary": "SELECT * FROM zone_weather",
+    "air_quality_impact_summary": "SELECT * FROM hourly_demand",
+}
 
 GOLD_QUERIES = {name: read_sql(f"gold/{name}.sql") for name in QUERY_KEYS}
 
@@ -29,7 +27,7 @@ def load_products(spark, gold_root):
 def build_products(spark, gold_root, source_path):
     """Replace four small snapshots and a four-row metadata table.
 
-    Use full refreshes in Week 2. Rerun this function after any Silver update.
+    Rerun this function after any Silver update.
     Writes are atomic per table, not a transaction across all four products.
     """
     gold_root = Path(gold_root)
@@ -37,20 +35,18 @@ def build_products(spark, gold_root, source_path):
     created = {}
 
     if DeltaTable.isDeltaTable(spark, metadata_path):
-        # Read as strings in Spark's UTC timezone, avoiding host timezone conversion.
+        
         created = {
-            r.product: r.created_at
-            for r in spark.read.format("delta")
-            .load(metadata_path)
-            .selectExpr("product", "CAST(created_at AS STRING) AS created_at")
-            .collect()
+            r.product: r.created_at for r in spark.read.format("delta")
+                .load(metadata_path)
+                .selectExpr("product", "CAST(created_at AS STRING) AS created_at")
+                .collect()
         }
 
     metadata = []
     metrics = {}
 
-    for name in PRODUCTS:
-        sql = read_sql(f"products/{name}.sql")
+    for name, sql in PRODUCTS.items():
         path = str(gold_root / name)
 
         start = time.perf_counter()

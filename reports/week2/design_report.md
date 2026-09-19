@@ -68,9 +68,20 @@ Gold stores common aggregations so users can repeat analyses without rescanning 
 | Weather Impact Summary | Zone and precipitation category | Trips, exposure hours, distance sum and valid-distance count. Supports weather-distance and weather-demand analyses. |
 | Air Quality Impact Summary | UTC hour | Demand, citywide PM2.5, local calendar fields and weather category. Supports air-quality correlation and weekday peaks. |
 
-The physical names are `daily_mobility_summary`, `taxi_zone_statistics`, `weather_impact_summary` and `air_quality_impact_summary`. They are written beneath `storage/delta/gold/week2_simple/`.
+The physical names are `daily_mobility_summary`, `taxi_zone_statistics`, `weather_impact_summary` and `air_quality_impact_summary`. They are written beneath `storage/delta/gold/`.
 
 The daily product supplies monthly trend totals; the shared calendar supplies covered-day counts. The zone product directly supplies monthly zone demand. The weather product supports two queries by combining its zone-level sums and counts or comparing category demand rates. The hourly product supports both air-quality correlation and weekday profiles.
+
+### Users, value and materialization
+
+| Product | Who uses it and why? | Why materialize rather than compute on demand? |
+|---|---|---|
+| Daily Mobility Summary | Transport planners monitor borough activity, daily trends and changes in average distance, duration and fares. | Recurring dashboards reuse daily sums and counts instead of grouping millions of trips for every request. |
+| Taxi Zone Statistics | Taxi service planners compare monthly zone demand and fare/distance patterns when reviewing service coverage. | Persisting monthly zone aggregates avoids repeated detailed scans and supplies a consistent snapshot for recurring comparisons. |
+| Weather Impact Summary | Transport operations analysts compare wet/dry demand rates and trip distances to inform weather contingency planning. | Exposure hours and zone/category totals require several shared calculations; storing them serves both weather analyses without rebuilding those intermediates. |
+| Air Quality Impact Summary | Environmental analysts study hourly PM2.5/demand associations; transport planners inspect weekday peaks. | A shared hourly table avoids repeatedly counting trips and joining the calendar, while preserving zero-demand hours and missing context consistently. |
+
+Materialization suits repeated use: these products contain only hundreds or a few thousand rows. It costs storage and refresh time and can become stale. A one-off query or a question requiring unavailable detail may be better served directly from Silver; consumers must check refresh metadata.
 
 ### Preserve meaning when reaggregating
 
@@ -92,29 +103,33 @@ Automatic freshness detection, source-version pinning, concurrent refresh writer
 
 ## 4. Optimization strategy
 
-The benchmark separates preaggregation from individual Spark techniques. All six analyses are measured over Silver and Gold with Adaptive Query Execution (AQE) and automatic broadcasting disabled. Four focused comparisons then select one Silver query per technique.
+The benchmark separates preaggregation from individual Spark techniques. All six analyses are measured over Silver and Gold with Adaptive Query Execution (AQE) and automatic broadcasting disabled. Each of the four Spark techniques is then tested on all six analytical queries, giving 24 before/after optimization comparisons.
 
 | Technique | Controlled comparison |
 |---|---|
-| Caching | Run weather-distance SQL before and after caching the projected `trips` view. Measure cache population separately. |
-| AQE | Run weather-demand variation with AQE and shuffle coalescing off, then on. Keep automatic broadcasting disabled. |
-| Partition pruning | Count pickups per zone for one month using date bounds alone, then add explicit year/month partition filters. |
-| Broadcast join | Join clean taxi trips to zone information without a hint, then broadcast the small zone lookup. |
+| Caching | Run all six full-period queries before and after caching the projected `trips` view. Measure cache population separately. |
+| AQE | Run all six full-period queries with AQE and shuffle coalescing off, then on. Keep automatic broadcasting disabled. |
+| Partition pruning | Run each query with identical date bounds, then add year/month partition predicates. Use February, plus January for monthly trends. |
+| Broadcast join | Run each query over clean trips joined to zones and a shared hourly context lookup, without and with broadcast hints. |
 
-Both pruning queries use the same already partitioned integrated table and return the same monthly answer. This tests the additional benefit of explicit partition predicates, not partitioned versus unpartitioned storage. Date-based Delta file skipping can already eliminate irrelevant files, so a faster explicit-filter result is not assumed.
+Both variants of each pruning query use the same already partitioned integrated table and return the same monthly answer. This tests the additional benefit of explicit partition predicates, not partitioned versus unpartitioned storage. Date-based Delta file skipping can already eliminate irrelevant files, so a faster explicit-filter result is not assumed.
 
-The broadcast experiment uses the underlying clean tables because integrated trips already contain zone attributes. Its baseline must avoid a broadcast hash join, and the hinted plan must contain one. Both variants are also checked against the integrated monthly-zone answer. Caching must produce a cached scan. AQE plans are inspected after execution to reveal adaptive shuffle decisions.
+The broadcast experiment uses the underlying clean tables because integrated trips already contain zone attributes. The hourly weather/PM2.5 lookup is derived from integrated trips and materialized once for both variants; its preparation cost is recorded separately. Its baseline must avoid a broadcast hash join, and the hinted plan must contain one. Both variants are also checked against their corresponding integrated Silver answers. Caching must produce a cached scan. AQE plans are inspected after execution to reveal adaptive shuffle decisions.
 
 ## 5. Engineering decisions and trade-offs
 
 **Measure complete answers.** Each case has one warmup and five timed executions. Timing includes planning, execution and collection of the complete answer, ensuring analytical calculations are performed. Correctness checks and plan extraction are outside the timer; Gold construction and cache population are recorded separately.
 
-**Keep performance evidence inspectable.** The 18 cases comprise 12 Silver/Gold cases and six additional focused cases, with two baselines reused. The default gives 90 timed executions. JSON stores samples, statistics, SQL, plans and status; Markdown reports are maintained manually. Failed runs retain partial measurements and must not support a complete comparison.
+**Keep performance evidence inspectable.** The 48 cases comprise 12 Silver/Gold, six cached, six AQE, 12 pruning and 12 broadcast cases. Caching and AQE reuse the six Silver baselines. The default gives 240 timed executions plus 48 warmups. JSON stores samples, statistics, SQL, plans and status; Markdown reports are maintained manually. Failed runs retain partial measurements and must not support a complete comparison.
 
 **Separate query latency from ownership cost.** Gold summaries require storage and refresh work. Caching needs repeated savings to repay population cost and uses executor memory. Broadcasting avoids join-side shuffles but requires a lookup that fits in memory; later aggregation can still shuffle. AQE helps only where runtime information enables a useful change. None of these techniques guarantees a benefit for every workload.
 
 **Limit conclusions to the experiment.** Runs use a fixed order and warm operating-system and JVM caches. Spark caches are cleared between relevant phases. Medians and timing spread describe this local workload, not statistical significance or distributed-cluster performance. Physical plans identify operators, but do not establish actual file-read counts.
 
-**Prepare for growth without adding unused machinery.** For ten cities, add `city_id` to keys and groupings, use local calendars and retain UTC joins. Reassess partition sizes and memory budgets. Incremental refresh could update affected city/date slices rather than rebuilding every product.
+**Expansion to ten cities.** Add `city_id` to trip, zone and product keys so location IDs cannot collide. Join environmental observations by city and UTC hour; generate each city's calendar using its own time zone and coverage. Standardize units and category definitions before comparing cities.
+
+Move beyond the local workstation to distributed Spark when measured volume and concurrency require it. Size shuffle partitions and executor memory from stage metrics; benchmark AQE and broadcast thresholds again rather than extrapolating local speedups. Consider city/year/month partitioning for frequent city-and-date queries only where partition sizes justify it, and compact small files. Keep tiny Gold products unpartitioned until their size warrants a different layout.
+
+Replace full refreshes with updates to affected city/date slices, including late-arriving corrections and dependent summaries. Pin source Delta versions and publish a completed refresh identifier so consumers can select consistent products. Monitor freshness, coverage and missing environmental observations per city. Cache reused intermediates selectively and broadcast lookups only while their measured size fits executor memory.
 
 The [benchmark report](benchmark_report.md) records the measured outcomes and plan evidence. The [README](README.md) provides the commands needed to reproduce them.

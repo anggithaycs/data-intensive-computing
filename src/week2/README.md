@@ -7,7 +7,7 @@ Two terms appear throughout the documentation:
 - **Silver** is the cleaned, detailed data. The integrated Silver table contains one row per accepted taxi trip, with location, weather and air-quality context.
 - **Gold** contains saved summaries of Silver data. Queries can reuse these summaries instead of repeating work over millions of trips.
 
-For the reasoning behind the queries, read the [design report](../../reports/week2/design_report.md). For measured results, open the [reports index](../../reports/week2/README.md).
+For the reasoning behind the queries, read the [design report](../../reports/week2/Design_Report.pdf). For measured results, open the [reports index](../../reports/week2/README.md).
 
 ## 1. Understand the workflow
 
@@ -77,7 +77,7 @@ Demand means the number of taxi pickups.
 
 Calendar fields use New York time; environmental observations are matched by UTC hour. The hourly calendar includes hours with zero trips and handles daylight-saving changes. Missing weather stays `unknown`.
 
-These choices affect interpretation. In particular, zero trips and missing input data cannot be distinguished by the calendar alone, and correlation does not establish causation. The [design report](../../reports/week2/design_report.md) explains coverage, missing values, ties and partial months in detail.
+These choices affect interpretation. In particular, zero trips and missing input data cannot be distinguished by the calendar alone, and correlation does not establish causation. The [design report](../../reports/week2/Design_Report.pdf) explains coverage, missing values, ties and partial months in detail.
 
 ## 5. Understand what the benchmark compares
 

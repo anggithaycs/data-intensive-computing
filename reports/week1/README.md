@@ -4,7 +4,7 @@ This directory contains the editable Markdown sources for the Week 1 submission,
 
 | Document | What it covers |
 |---|---|
-| [Design report](design_report.md) | The data catalog, storage architecture, common data model and engineering decisions. |
+| [Design report](Design_Report.pdf) | The data catalog, storage architecture, common data model and engineering decisions. |
 | [Architecture guide](architecture.md) | The pipeline diagram and how data moves through the platform. |
 | [Benchmark report](benchmark_report.md) | Storage and query measurements, the method and the limits of the results. |
 | [Task answers](task_answers.md) | Answers to each Week 1 task and its discussion questions. |

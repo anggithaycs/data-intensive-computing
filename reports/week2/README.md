@@ -4,11 +4,12 @@ This folder contains the submission deliverables for Week 2 analytical processin
 
 | Document | Purpose |
 |---|---|
-| [Design report](design_report.md) | Analytical requirements, query design, Gold products, optimization strategy, engineering decisions and trade-offs. |
-| [Benchmark report](benchmark_report.md) | Methodology, before/after timings comparing every query across all five optimization techniques, physical plan analysis, and performance discussion. |
+| [Design report](Design_Report.pdf) | Analytical requirements, query design, Gold products, optimization strategy, engineering decisions and trade-offs. |
+| [Benchmark report](Benchmark_Report_W2.pdf) | Methodology, before/after timings comparing every query across all five optimization techniques, physical plan analysis, and performance discussion. |
 | [Benchmark Run Data](../../storage/metrics/week2/runs/20260917_161256_727995/) | Measurements for run `20260917_161256_727995`, including `comparison.json`, `metrics.json`, and physical execution plans under `plans/`. |
-
-For the detailed codebase walkthrough and SQL architecture, see [src/week2/README.md](../../src/week2/README.md).
+|[Week 1 reports README](../week1/README.md)|Guide to the Week 1 reports|
+|[Week 2 code README](../../src/week2/README.md)|Code walkthrough and instructions for running analytical queries, building Gold products and reproducing benchmarks.|
+|[Project README](../../README.md)| Environment setup, source-data requirements and instructions for running the Week 1 pipeline.|
 
 ## 1. Prerequisites
 

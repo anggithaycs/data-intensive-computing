@@ -1,6 +1,19 @@
-# Week 1 Urban Data Integration Platform
+# Urban Data Platform: Weeks 1 and 2
 
-This project implements the Week 1 urban data platform in Apache Spark and Delta Lake. It ingests and validates four datasets, combines accepted taxi trips with location, weather and air-quality information, and benchmarks three storage layouts.
+This project uses Apache Spark and Delta Lake to analyse New York taxi trips alongside weather, air quality and taxi-zone data.
+
+- **Week 1:** ingest and validate four datasets, integrate trips with environmental and location information, and benchmark three storage layouts.
+- **Week 2:** answer six analytical questions, build four reusable Gold summaries, and test caching, partition pruning, broadcast joins and Adaptive Query Execution (AQE) on all six queries.
+
+## Find the right guide
+
+| What you need | Where to go |
+|---|---|
+| Project setup and Week 1 execution | Continue below. |
+| Week 1 reports and evidence | [Week 1 reports README](reports/week1/README.md) |
+| Week 2 design and benchmark reports | [Week 2 reports README](reports/week2/README.md) |
+| Week 2 commands and code walkthrough | [Week 2 code README](src/week2/README.md) |
+| Analytical queries and SQL organization | [Week 2 SQL README](src/week2/sql/README.md) |
 
 ## Setup and execution
 
@@ -26,11 +39,58 @@ The default command ingests all four sources, builds the integrated taxi table, 
 
 Both commands replace the Bronze and Silver snapshots. A full benchmark writes its layouts into fresh directories so files from previous runs do not affect the measurements. By default, Spark uses `local[*]`, requests `8g` of driver memory, and uses eight shuffle/writer partitions. Each benchmark query has five measured repetitions. Allow enough memory and disk space for the materialized source data, quarantined rows, integrated output and benchmark copies.
 
+## Run Week 2
+
+After Week 1 completes successfully, run the full Week 2 workflow from the project root using the same environment:
+
+```powershell
+.venv/Scripts/python.exe -m src.week2.run all --repeats 5 --month 2024-02
+```
+
+This builds Gold, saves all six Silver query answers and runs the benchmark suite. If the Week 1 Silver tables already exist and are current, you can start here. Otherwise, run Week 1 first; its `--skip-benchmark` option prepares the data without running the Week 1 storage experiments.
+
+For individual stages:
+
+| Task | Command |
+|---|---|
+| Run all six Silver queries | `.venv/Scripts/python.exe -m src.week2.run queries` |
+| Run one query | `.venv/Scripts/python.exe -m src.week2.run queries --query monthly_zone_demand` |
+| Build or refresh Gold | `.venv/Scripts/python.exe -m src.week2.run products` |
+| Query existing Gold products | `.venv/Scripts/python.exe -m src.week2.run queries --gold` |
+| Rebuild Gold and benchmark | `.venv/Scripts/python.exe -m src.week2.run benchmark --repeats 5 --month 2024-02` |
+
+The six analyses cover monthly zone demand, distance by weather, air quality and demand, weather-related demand variation, weekday peak hours and monthly demand trends.
+
+The benchmark includes six Silver/Gold comparisons and **24 optimization comparisons**, testing all four Spark techniques on every query. It measures **48 cases**, each with one warmup and five timed repetitions by default. Answers are checked for equivalence, and executed plans are saved for inspection.
+
+`--month` selects the pruning experiment's window, not the period for the whole suite. Five pruning queries use that month; monthly trends also reads the preceding month. Use `--repeats 1` for a smoke check. `--query` selects an analytical answer but does not narrow the benchmark.
+
+### Week 2 outputs
+
+```text
+storage/delta/gold/
+  daily_mobility_summary/
+  taxi_zone_statistics/
+  weather_impact_summary/
+  air_quality_impact_summary/
+  _metadata/
+
+storage/metrics/week2/runs/<execution_time>/
+  <query_name>.json   # Complete answers when the queries stage runs
+  products.json      # Product sizes and build times when Gold is built
+  metrics.json       # Benchmark status, samples, comparisons, SQL and plans
+  plans/             # Before/after plans grouped by technique and query
+```
+
+The terminal prints the exact run directory. Confirm that `metrics.json` reports success before using a complete run in a report. Gold refreshes replace the current snapshots; rebuild after changing Silver or SQL. Week 2 reports are maintained manually under [reports/week2](reports/week2/README.md); the analytical runner does not generate or overwrite them.
+
 ## Code organization
 
 The source code follows the processing stages. `src/common` validates configuration, sets up logging and creates Spark sessions. `src/ingestion` implements the shared read, prepare, classify and publish lifecycle, together with the four domain transformations. `src/integration` joins zone, weather and air-quality context and verifies trip identity. `src/storage` runs independent experiments from raw input and measures query performance.
 
-The `scripts` directory contains orchestration and report-generation entry points. The `tests` directory holds fast configuration and orchestration checks, isolated Spark fixtures and post-run acceptance checks. Editable submission sources and existing PDF and diagram exports are in `reports/week1`.
+Week 2 lives in `src/week2`: `analysis.py` prepares shared views, `products.py` builds Gold, `benchmark.py` measures and validates comparisons, and `run.py` provides the command-line entry point. Substantial SQL definitions live under `src/week2/sql`.
+
+The `scripts` directory contains orchestration and report-generation entry points. The `tests` directory holds fast configuration and orchestration checks, isolated Spark fixtures and post-run acceptance checks. Week 1 reports and exports are in `reports/week1`; Week 2 design and benchmark reports are in `reports/week2`.
 
 ## Configuration and contracts
 
@@ -75,13 +135,14 @@ spark.stop()
 .venv/Scripts/python.exe tests/test_configuration_and_runner.py
 .venv/Scripts/python.exe tests/test_week1_regressions.py
 .venv/Scripts/python.exe tests/test_week1_acceptance.py
+.venv/Scripts/python.exe tests/test_week2_simple.py
 .venv/Scripts/python.exe -m ruff check src scripts tests
 .venv/Scripts/python.exe -m ruff format --check src scripts tests
 ```
 
 The configuration suite runs without a Spark session. Spark regression fixtures write only to `.test-output/`, including their audit records. Run the acceptance suite after a full data run because it reads the configured Delta outputs. Before running Ruff, install the pinned development dependencies with `pip install -r requirements-dev.txt`. The lint and formatting rules are in `pyproject.toml`.
 
-Each execution saves a timestamped JSON summary and atomically replaces the latest-summary file. An artifact-writing failure causes the command to exit with a failure status; if processing had already failed, the original exception is preserved. Ingestion-only runs also replace the latest summary, so select a timestamped successful full run when regenerating a benchmark report:
+Each Week 1 execution saves a timestamped JSON summary and atomically replaces the latest-summary file. An artifact-writing failure causes the command to exit with a failure status; if processing had already failed, the original exception is preserved. Ingestion-only runs also replace the latest summary, so select a timestamped successful full run when regenerating a benchmark report:
 
 ```powershell
 .venv/Scripts/python.exe -m src.storage.report --metrics storage/metrics/<successful-full-run>.json
@@ -98,7 +159,5 @@ python scripts/package_week1.py --metrics storage/metrics/<successful-full-run>.
 Set `POPPLER_BIN` if Poppler is not on `PATH`. The builder requires an explicitly selected successful raw-input metrics artifact. It regenerates the benchmark source and copies the JSON to `reports/week1/evidence/`. Visually inspect any PDFs rebuilt after source edits. The Spark runner itself regenerates only benchmark Markdown. Older benchmark and validation material is historical; consult the canonical benchmark report to identify the measurements currently presented.
 
 ## Next tasks
-
-Week 2 submission reports and reproduction instructions are in [reports/week2/README.md](reports/week2/README.md). The code walkthrough is in [src/week2/README.md](src/week2/README.md). It contains six Spark SQL analyses in `src/week2/sql/silver/`, four Gold Delta products and focused caching, partition-pruning, broadcast and AQE experiments. Start with the SQL files, then read `analysis.py`, `products.py`, `run.py`, and `benchmark.py`. Python handles execution and saves measurements; Week 2 Markdown reports are maintained manually. Run the full workflow from the project root with `.venv/Scripts/python.exe -m src.week2.run all`. It reads the existing Silver tables and writes its own outputs under `storage/delta/gold/week2_simple` and `reports/week2_simple`.
 
 Week 3 needs a policy for identifying corrected trips, because changing fare or distance changes the taxi hash. It also needs explicit schema evolution for `humidity` and `aqi`, merge-based publication, and refreshes of affected analytical products. Week 4 can reuse preparation and integration while adding features and temporal splits for each prediction target. These extensions can be introduced when needed without adding speculative orchestration or machine-learning frameworks to Week 1.

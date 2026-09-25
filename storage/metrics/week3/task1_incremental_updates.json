@@ -1,0 +1,62 @@
+{
+  "generated_at_utc": "2026-09-25T12:04:05.608608+00:00",
+  "seed": 20250925,
+  "release_start": "2025-01-01T01:00:00",
+  "release_end": "2025-01-08T00:00:00",
+  "datasets": {
+    "Taxi Trips": {
+      "original_records": 9554778,
+      "update_rows": 764382,
+      "new_rows": 668834,
+      "duplicate_rows": 95548,
+      "rejected_rows": 0,
+      "earliest_update_timestamp": "2025-01-01T01:00:01",
+      "latest_update_timestamp": "2025-01-07T23:59:55",
+      "schema_version_before": "2.0.0",
+      "schema_version_after": "2.0.0",
+      "schema_evolution": "None",
+      "new_column_detected": "N/A",
+      "new_column_minimum": null,
+      "new_column_maximum": null,
+      "source_max_relevant_timestamp": "2024-04-02T18:08:46",
+      "schema_preserved": true,
+      "duplicate_rows_correctly_identified": true,
+      "release_start": "2025-01-01T01:00:00",
+      "release_end": "2025-01-08T00:00:00"
+    },
+    "Weather": {
+      "original_records": 8784,
+      "update_rows": 168,
+      "new_rows": 168,
+      "duplicate_rows": 0,
+      "rejected_rows": 0,
+      "earliest_update_timestamp": "2025-01-01T01:00:00",
+      "latest_update_timestamp": "2025-01-08T00:00:00",
+      "schema_version_before": "2.0.0",
+      "schema_version_after": "2.1.0",
+      "schema_evolution": "+ humidity",
+      "new_column_detected": true,
+      "new_column_minimum": 39.0,
+      "new_column_maximum": 66.0,
+      "schema_preserved": true,
+      "invalid_humidity_count": 0
+    },
+    "Air Quality": {
+      "original_records": 8139551,
+      "update_rows": 363195,
+      "new_rows": 363195,
+      "duplicate_rows": 0,
+      "rejected_rows": 0,
+      "earliest_update_timestamp": "2025-01-01T01:00:00",
+      "latest_update_timestamp": "2025-01-08T00:00:00",
+      "schema_version_before": "2.0.0",
+      "schema_version_after": "2.1.0",
+      "schema_evolution": "+ aqi",
+      "new_column_detected": true,
+      "new_column_minimum": 4.0,
+      "new_column_maximum": 500.0,
+      "schema_preserved": true,
+      "invalid_aqi_count": 0
+    }
+  }
+}

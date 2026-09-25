@@ -90,7 +90,3 @@ The complete Week 3 assignment contains five tasks:
 5. Evaluate incremental processing, refresh, validation and monitoring overhead.
 
 Only Task 1 is implemented in this branch at present. Task 2 and later tasks should build on the update files and measured evidence produced by Task 1.
-
-## Protecting the Week 1 and Week 2 baseline
-
-Week 3 must not modify the original raw datasets or overwrite Week 1 and Week 2 benchmark results. The Week 1 Delta tables under `storage/delta/` are the baseline for later incremental processing experiments. Keep Week 3 outputs in the separate `data/updates/`, `storage/metrics/week3/` and `reports/week3/` paths.

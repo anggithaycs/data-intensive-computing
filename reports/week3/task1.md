@@ -6,7 +6,7 @@ Task 1 simulates a second data release containing new records and controlled sch
 
 ## Update Design
 
-Taxi uses 7% new trips and 1% exact duplicates, calculated from the source row count. Weather and Air Quality continue hourly observations for a common seven-day simulated release period beginning immediately after the original maximum timestamp. Time-based continuation is used for environmental data because their observations are naturally defined by time coverage rather than a target percentage. The seven-day duration is an implementation choice because the assignment specifies an immediately following period but does not prescribe an exact duration. Weather adds numeric `humidity`; Air Quality adds numeric `aqi`.
+Taxi uses 7% new trips and 1% exact duplicates, calculated from the source row count. Weather and Air Quality continue hourly observations for a common seven-day simulated release period beginning immediately after the original maximum timestamp. Time-based continuation is used for environmental data because their observations are naturally defined by time coverage rather than a target percentage. The seven-day duration is an implementation choice because the assignment specifies an immediately following period but does not prescribe an exact duration. Weather adds numeric `humidity`, whereas Air Quality adds numeric `aqi`.
 
 ## Results
 

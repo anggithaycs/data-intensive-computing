@@ -10,8 +10,8 @@
       "new_rows": 668834,
       "duplicate_rows": 95548,
       "rejected_rows": 0,
-      "earliest_update_timestamp": "2025-01-01T01:00:01",
-      "latest_update_timestamp": "2025-01-07T23:59:55",
+      "earliest_update_timestamp": "2024-04-02T18:10:04",
+      "latest_update_timestamp": "2025-01-07T23:57:06",
       "schema_version_before": "2.0.0",
       "schema_version_after": "2.0.0",
       "schema_evolution": "None",
@@ -20,9 +20,48 @@
       "new_column_maximum": null,
       "source_max_relevant_timestamp": "2024-04-02T18:08:46",
       "schema_preserved": true,
-      "duplicate_rows_correctly_identified": true,
-      "release_start": "2025-01-01T01:00:00",
-      "release_end": "2025-01-08T00:00:00"
+      "duplicate_rows_correctly_identified": false,
+      "release_start": "2024-04-02T18:08:47",
+      "release_end": "2025-01-08T00:00:00",
+      "earliest_new_pickup_timestamp": "2024-04-02T18:10:04",
+      "latest_new_pickup_timestamp": "2025-01-07T23:56:06",
+      "earliest_new_dropoff_timestamp": "2024-04-02T18:11:04",
+      "latest_new_dropoff_timestamp": "2025-01-07T23:57:06",
+      "schema_before": "2.0.0",
+      "schema_after": "2.0.0",
+      "new_trip_id_count": 668834,
+      "duplicate_trip_id_count": 95542,
+      "new_trip_ids": 668834,
+      "duplicate_trip_ids": 95542,
+      "incremental_ingestion": {
+        "input_records": 764382,
+        "inserted_records": 659476,
+        "duplicate_records": 93650,
+        "rejected_records": 11256,
+        "updated_records": 0,
+        "execution_seconds": 51.573,
+        "schema_version_before": "2.0.0",
+        "schema_version_after": "2.0.0",
+        "schema_changes": [],
+        "delta_version_before": 0,
+        "delta_version_after": 1,
+        "generated_source_duplicate_rows": 95548,
+        "generated_distinct_duplicate_trip_ids": 95542,
+        "target_matched_duplicate_rows": 93650
+      },
+      "correctness_checks": {
+        "final_count": 10053806,
+        "baseline_count": 9394330,
+        "final_count_equals_baseline_plus_inserted": true,
+        "inserted_trip_ids_absent_from_baseline": true,
+        "duplicate_trip_ids_already_in_baseline": false,
+        "matched_records_unchanged": true,
+        "historical_records_unchanged": true,
+        "source_update_unchanged": true,
+        "incremental_merge_verified": true,
+        "snapshot_overwrite_detected": false,
+        "note": "93,650 physical update rows matched 93,644 baseline trip IDs. The generated duplicate population exceeded the deduplicated Silver baseline; unmatched duplicate candidates were rejected."
+      }
     },
     "Weather": {
       "original_records": 8784,
@@ -39,7 +78,35 @@
       "new_column_minimum": 39.0,
       "new_column_maximum": 66.0,
       "schema_preserved": true,
-      "invalid_humidity_count": 0
+      "invalid_humidity_count": 0,
+      "incremental_ingestion": {
+        "input_records": 168,
+        "inserted_records": 168,
+        "duplicate_records": 0,
+        "rejected_records": 0,
+        "updated_records": 0,
+        "execution_seconds": 14.298,
+        "schema_version_before": "2.0.0",
+        "schema_version_after": "2.1.0",
+        "schema_changes": [
+          "+humidity"
+        ],
+        "delta_version_before": 0,
+        "delta_version_after": 1
+      },
+      "correctness_checks": {
+        "baseline_count": 8784,
+        "final_count": 8952,
+        "final_count_equals_baseline_plus_inserted": true,
+        "humidity_exists": true,
+        "historical_humidity_null_count": 8784,
+        "new_observations_have_populated_humidity": true,
+        "existing_columns_unchanged": true,
+        "historical_records_unchanged": true,
+        "source_update_unchanged": true,
+        "incremental_merge_verified": true,
+        "snapshot_overwrite_detected": false
+      }
     },
     "Air Quality": {
       "original_records": 8139551,
@@ -56,7 +123,52 @@
       "new_column_minimum": 4.0,
       "new_column_maximum": 500.0,
       "schema_preserved": true,
-      "invalid_aqi_count": 0
+      "invalid_aqi_count": 0,
+      "incremental_ingestion": {
+        "input_records": 363195,
+        "inserted_records": 1008,
+        "duplicate_records": 0,
+        "rejected_records": 362187,
+        "updated_records": 0,
+        "execution_seconds": 32.651,
+        "schema_version_before": "2.0.0",
+        "schema_version_after": "2.1.0",
+        "schema_changes": [
+          "+aqi"
+        ],
+        "delta_version_before": 0,
+        "delta_version_after": 1
+      },
+      "correctness_checks": {
+        "baseline_count": 51855,
+        "final_count": 52863,
+        "final_count_equals_baseline_plus_inserted": true,
+        "aqi_exists": true,
+        "historical_aqi_null_count": 51855,
+        "new_observations_have_populated_aqi": true,
+        "aqi_minimum": 10.0,
+        "aqi_maximum": 105.0,
+        "existing_columns_unchanged": true,
+        "historical_records_unchanged": true,
+        "source_update_unchanged": true,
+        "incremental_merge_verified": true,
+        "snapshot_overwrite_detected": false,
+        "target_duplicate_matches": 0,
+        "repeated_keys_within_update": 362187,
+        "note": "Rejected rows were repeated Air Quality observation keys within the update file; no existing-target duplicate matches occurred."
+      }
     }
+  },
+  "audit_scope": {
+    "generated_update_statistics_preserved": true,
+    "incremental_ingestion_statistics_added": true,
+    "correctness_results_added": true,
+    "no_data_regenerated_during_final_audit": true,
+    "no_update_files_modified": true,
+    "no_raw_source_files_modified": true,
+    "no_task2_work_performed": true,
+    "snapshot_overwrite_detected": false,
+    "unexpected_delta_tables_modified": false,
+    "task2_started": false
   }
 }

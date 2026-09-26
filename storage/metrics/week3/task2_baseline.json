@@ -1,0 +1,330 @@
+{
+  "queries": {
+    "baseline_run_id": "20260925_085344_238641",
+    "run_status": "success",
+    "measured_repeats": 1,
+    "benchmark_metadata_file": "storage/metrics/week2/runs/20260925_085344_238641/metrics.json",
+    "baseline_coverage": {
+      "trip_count": 9394330,
+      "first_date": "2024-01-01",
+      "last_date": "2024-03-31",
+      "days_with_trips": 91,
+      "unknown_weather_trips": 706969
+    },
+    "items": {
+      "monthly_zone_demand": {
+        "query_name": "monthly_zone_demand",
+        "sql_file": "src/week2/sql/silver/monthly_zone_demand.sql",
+        "source_tables": [
+          "storage/delta/silver/integrated_taxi_trips"
+        ],
+        "result_file": "storage/metrics/week2/runs/20260925_085344_238641/monthly_zone_demand.json",
+        "result_rows": 773,
+        "baseline_execution_time_ms": 599.6016670251265,
+        "execution_time_source": "Silver benchmark case monthly_zone_demand_silver; one measured repeat",
+        "run_id": "20260925_085344_238641",
+        "coverage": "Pickup months 2024-01 through 2024-03; integrated input coverage 2024-01-01 through 2024-03-31.",
+        "result_summary": {
+          "aggregation": "Trip count grouped by month, pickup_location_id, pickup_zone, and pickup_borough.",
+          "first_result": {
+            "month": "2024-01-01",
+            "pickup_location_id": 1,
+            "pickup_zone": "Newark Airport",
+            "pickup_borough": "EWR",
+            "trip_count": 192
+          },
+          "last_result": {
+            "month": "2024-03-01",
+            "pickup_location_id": 265,
+            "pickup_zone": "Outside of NYC",
+            "pickup_borough": "N/A",
+            "trip_count": 1605
+          }
+        }
+      },
+      "weather_trip_distance": {
+        "query_name": "weather_trip_distance",
+        "sql_file": "src/week2/sql/silver/weather_trip_distance.sql",
+        "source_tables": [
+          "storage/delta/silver/integrated_taxi_trips"
+        ],
+        "result_file": "storage/metrics/week2/runs/20260925_085344_238641/weather_trip_distance.json",
+        "result_rows": 3,
+        "baseline_execution_time_ms": 375.137333991006,
+        "execution_time_source": "Silver benchmark case weather_trip_distance_silver; one measured repeat",
+        "run_id": "20260925_085344_238641",
+        "coverage": "Integrated input coverage 2024-01-01 through 2024-03-31.",
+        "result_summary": {
+          "aggregation": "Trip count, non-null distance count, and average trip distance grouped by pickup weather category.",
+          "weather_categories": [
+            {
+              "weather": "dry",
+              "trip_count": 7624853,
+              "distance_count": 7624853,
+              "avg_distance": 3.2700134848501716
+            },
+            {
+              "weather": "unknown",
+              "trip_count": 706969,
+              "distance_count": 706969,
+              "avg_distance": 3.2203082879164397
+            },
+            {
+              "weather": "wet",
+              "trip_count": 1062508,
+              "distance_count": 1062508,
+              "avg_distance": 2.979924744096075
+            }
+          ]
+        }
+      },
+      "air_quality_demand": {
+        "query_name": "air_quality_demand",
+        "sql_file": "src/week2/sql/silver/air_quality_demand.sql",
+        "source_tables": [
+          "storage/delta/silver/integrated_taxi_trips"
+        ],
+        "result_file": "storage/metrics/week2/runs/20260925_085344_238641/air_quality_demand.json",
+        "result_rows": 1,
+        "baseline_execution_time_ms": 733.5902919876389,
+        "execution_time_source": "Silver benchmark case air_quality_demand_silver; one measured repeat",
+        "run_id": "20260925_085344_238641",
+        "coverage": "Hourly series covers 2024-01-01 through 2024-03-31.",
+        "result_summary": {
+          "total_hours": 2183,
+          "matched_hours": 2183,
+          "pm25_trip_demand_correlation": 0.06733192430826998
+        }
+      },
+      "weather_demand_variation": {
+        "query_name": "weather_demand_variation",
+        "sql_file": "src/week2/sql/silver/weather_demand_variation.sql",
+        "source_tables": [
+          "storage/delta/silver/integrated_taxi_trips"
+        ],
+        "result_file": "storage/metrics/week2/runs/20260925_085344_238641/weather_demand_variation.json",
+        "result_rows": 262,
+        "baseline_execution_time_ms": 2185.7472500414588,
+        "execution_time_source": "Silver benchmark case weather_demand_variation_silver; one measured repeat",
+        "run_id": "20260925_085344_238641",
+        "coverage": "Dry and wet exposure across the integrated input period 2024-01-01 through 2024-03-31.",
+        "result_summary": {
+          "aggregation": "For each zone with both dry and wet exposure, ranks the difference between maximum and minimum trip demand per observed hour.",
+          "weather_filter": [
+            "dry",
+            "wet"
+          ],
+          "top_result": {
+            "pickup_location_id": 138,
+            "pickup_zone": "LaGuardia Airport",
+            "demand_range": 27.53222075810251,
+            "minimum_exposure_hours": 241,
+            "demand_rank": 1
+          },
+          "last_result": {
+            "pickup_location_id": 5,
+            "pickup_zone": "Arden Heights",
+            "demand_range": 0.0,
+            "minimum_exposure_hours": 241,
+            "demand_rank": 256
+          }
+        }
+      },
+      "weekday_peak_hours": {
+        "query_name": "weekday_peak_hours",
+        "sql_file": "src/week2/sql/silver/weekday_peak_hours.sql",
+        "source_tables": [
+          "storage/delta/silver/integrated_taxi_trips"
+        ],
+        "result_file": "storage/metrics/week2/runs/20260925_085344_238641/weekday_peak_hours.json",
+        "result_rows": 168,
+        "baseline_execution_time_ms": 796.8997919815592,
+        "execution_time_source": "Silver benchmark case weekday_peak_hours_silver; one measured repeat",
+        "run_id": "20260925_085344_238641",
+        "coverage": "Calendar hours span the integrated input period 2024-01-01 through 2024-03-31 in local New York time.",
+        "result_summary": {
+          "aggregation": "Average hourly trip demand grouped by weekday and local hour, with demand ranks within weekday.",
+          "top_result": {
+            "weekday": 1,
+            "local_hour": 18,
+            "hour_occurrences": 13,
+            "avg_demand": 6175.615384615385,
+            "demand_rank": 1
+          },
+          "last_result": {
+            "weekday": 7,
+            "local_hour": 5,
+            "hour_occurrences": 13,
+            "avg_demand": 567.1538461538462,
+            "demand_rank": 24
+          }
+        }
+      },
+      "monthly_demand_trends": {
+        "query_name": "monthly_demand_trends",
+        "sql_file": "src/week2/sql/silver/monthly_demand_trends.sql",
+        "source_tables": [
+          "storage/delta/silver/integrated_taxi_trips"
+        ],
+        "result_file": "storage/metrics/week2/runs/20260925_085344_238641/monthly_demand_trends.json",
+        "result_rows": 3,
+        "baseline_execution_time_ms": 836.1140000051819,
+        "execution_time_source": "Silver benchmark case monthly_demand_trends_silver; one measured repeat",
+        "run_id": "20260925_085344_238641",
+        "coverage": "Monthly results cover January through March 2024; trend comparisons use the previous month when available.",
+        "result_summary": {
+          "aggregation": "Monthly trip totals and observed days, average daily demand, previous-month totals, and percentage change.",
+          "monthly_trip_counts": [
+            {
+              "month": "2024-01-01",
+              "observed_days": 31,
+              "trip_count": 2919226,
+              "previous_month_trips": null,
+              "avg_daily_demand": 94168.58064516129,
+              "change_pct": null
+            },
+            {
+              "month": "2024-02-01",
+              "observed_days": 29,
+              "trip_count": 2959815,
+              "previous_month_trips": 2919226,
+              "avg_daily_demand": 102062.58620689655,
+              "change_pct": 1.3904027985500267
+            },
+            {
+              "month": "2024-03-01",
+              "observed_days": 31,
+              "trip_count": 3515289,
+              "previous_month_trips": 2959815,
+              "avg_daily_demand": 113396.41935483871,
+              "change_pct": 18.76718646266743
+            }
+          ]
+        }
+      }
+    }
+  },
+  "products": {
+    "baseline_run_id": "20260925_085344_238641",
+    "product_results_file": "storage/metrics/week2/runs/20260925_085344_238641/products.json",
+    "source": "storage/delta/silver/integrated_taxi_trips",
+    "items": {
+      "daily_mobility_summary": {
+        "product_name": "Daily Mobility Summary",
+        "implementation_file": "src/week2/sql/products/daily_mobility_summary.sql and src/week2/products.py",
+        "target_path": "storage/delta/gold/daily_mobility_summary",
+        "row_count": 714,
+        "schema": [
+          {"name": "pickup_date", "type": "date"},
+          {"name": "pickup_borough", "type": "string"},
+          {"name": "trip_count", "type": "long"},
+          {"name": "distance_sum", "type": "double"},
+          {"name": "distance_count", "type": "long"},
+          {"name": "duration_sum", "type": "double"},
+          {"name": "duration_count", "type": "long"},
+          {"name": "fare_sum", "type": "double"},
+          {"name": "fare_count", "type": "long"}
+        ],
+        "partition_columns": [],
+        "refresh_method": "Full snapshot overwrite; aggregate trips by pickup_date and pickup_borough.",
+        "build_seconds": 4.137734583986457,
+        "delta_version": 0,
+        "delta_commit_utc": "2026-09-25T06:53:54.095000+00:00"
+      },
+      "taxi_zone_statistics": {
+        "product_name": "Taxi Zone Statistics",
+        "implementation_file": "src/week2/sql/products/taxi_zone_statistics.sql and src/week2/products.py",
+        "target_path": "storage/delta/gold/taxi_zone_statistics",
+        "row_count": 773,
+        "schema": [
+          {"name": "month", "type": "date"},
+          {"name": "pickup_location_id", "type": "integer"},
+          {"name": "pickup_zone", "type": "string"},
+          {"name": "pickup_borough", "type": "string"},
+          {"name": "trip_count", "type": "long"},
+          {"name": "distance_sum", "type": "double"},
+          {"name": "distance_count", "type": "long"},
+          {"name": "fare_sum", "type": "double"},
+          {"name": "fare_count", "type": "long"}
+        ],
+        "partition_columns": [],
+        "refresh_method": "Full snapshot overwrite; aggregate trips by pickup month and pickup zone identity.",
+        "build_seconds": 3.2800589169492014,
+        "delta_version": 0,
+        "delta_commit_utc": "2026-09-25T06:53:58.412000+00:00"
+      },
+      "weather_impact_summary": {
+        "product_name": "Weather Impact Summary",
+        "implementation_file": "src/week2/products.py and src/week2/sql/views/zone_weather.sql",
+        "target_path": "storage/delta/gold/weather_impact_summary",
+        "row_count": 786,
+        "schema": [
+          {"name": "pickup_location_id", "type": "integer"},
+          {"name": "pickup_zone", "type": "string"},
+          {"name": "weather", "type": "string"},
+          {"name": "observed_hours", "type": "long"},
+          {"name": "trip_count", "type": "long"},
+          {"name": "distance_sum", "type": "double"},
+          {"name": "distance_count", "type": "long"}
+        ],
+        "partition_columns": [],
+        "refresh_method": "Full snapshot overwrite from the zone_weather view; combines exposure hours with per-zone and weather trip/distance aggregates.",
+        "build_seconds": 5.634348457970191,
+        "delta_version": 0,
+        "delta_commit_utc": "2026-09-25T06:54:04.075000+00:00"
+      },
+      "air_quality_impact_summary": {
+        "product_name": "Air Quality Impact Summary",
+        "implementation_file": "src/week2/products.py and src/week2/sql/views/hourly_demand.sql",
+        "target_path": "storage/delta/gold/air_quality_impact_summary",
+        "row_count": 2183,
+        "schema": [
+          {"name": "hour_utc", "type": "timestamp"},
+          {"name": "local_date", "type": "date"},
+          {"name": "weekday", "type": "integer"},
+          {"name": "local_hour", "type": "integer"},
+          {"name": "trip_count", "type": "long"},
+          {"name": "pm25", "type": "double"},
+          {"name": "weather", "type": "string"}
+        ],
+        "partition_columns": [],
+        "refresh_method": "Full snapshot overwrite from the hourly_demand view; join hourly trip counts with the calendar and integrated PM2.5/weather context.",
+        "build_seconds": 3.4962949589826167,
+        "delta_version": 0,
+        "delta_commit_utc": "2026-09-25T06:54:08.286000+00:00"
+      }
+    }
+  },
+  "integrated_dataset": {
+    "table": "storage/delta/silver/integrated_taxi_trips",
+    "delta_version": 0,
+    "row_count": 9394330,
+    "schema_version": null,
+    "schema_version_unavailable_reason": "The integrated Delta transaction metadata has no application schema-version field.",
+    "min_pickup_date": "2024-01-01",
+    "max_pickup_date": "2024-03-31",
+    "min_pickup_datetime_utc": "2024-01-01T05:00:00.000Z",
+    "max_pickup_datetime_utc": "2024-04-01T03:59:59.000Z",
+    "partition_columns": [
+      "pickup_year",
+      "pickup_month"
+    ],
+    "baseline_data_coverage": {
+      "first_date": "2024-01-01",
+      "last_date": "2024-03-31",
+      "days_with_trips": 91,
+      "trip_count": 9394330,
+      "unknown_weather_trips": 706969
+    },
+    "baseline_delta_commit_utc": "2026-09-25T06:52:28.194000+00:00",
+    "consistency_checks": {
+      "all_six_query_results_and_metrics_share_run_id": true,
+      "query_and_product_metrics_from_same_run_directory": true,
+      "product_delta_logs_match_recorded_baseline_build": true,
+      "integrated_row_count_matches_week2_coverage": true,
+      "integrated_date_coverage_matches_week2_coverage": true,
+      "integrated_table_is_version_zero_baseline": true,
+      "captured_week2_run_uses_one_measured_repeat": true
+    }
+  }
+}

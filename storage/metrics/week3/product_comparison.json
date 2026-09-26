@@ -1,0 +1,402 @@
+{
+  "baseline_run_id": "20260925_085344_238641",
+  "integrated_delta_version": 1,
+  "products": {
+    "daily_mobility_summary": {
+      "product_name": "Daily Mobility Summary",
+      "affected": true,
+      "classification": "A",
+      "refresh_strategy": "incremental",
+      "reason": "Additive count/sum/non-null-count aggregate groups are exclusively for dates after the baseline.",
+      "baseline_row_count": 714,
+      "updated_row_count": 2440,
+      "affected_scope": {
+        "new_trip_rows": 659476,
+        "minimum_pickup_date": "2024-04-02",
+        "maximum_pickup_date": "2025-01-07",
+        "new_aggregate_rows": 1726,
+        "overlapping_baseline_groups": 0
+      },
+      "schema_before": [
+        {
+          "name": "pickup_date",
+          "type": "date"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "duration_sum",
+          "type": "double"
+        },
+        {
+          "name": "duration_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ],
+      "schema_after": [
+        {
+          "name": "pickup_date",
+          "type": "date"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "duration_sum",
+          "type": "double"
+        },
+        {
+          "name": "duration_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ],
+      "schema_compatible": true,
+      "incremental_refresh_time_seconds": 4.225,
+      "full_refresh_reference_time_seconds": 1.263,
+      "output_equivalent_to_full_refresh": true,
+      "equivalence_check": {
+        "missing_reference_keys": 0,
+        "unexpected_keys": 0,
+        "value_mismatches": 0
+      },
+      "baseline_delta_version": 0,
+      "updated_delta_version": 2,
+      "schema_evolution_fields_used": [],
+      "notes": "New humidity and aqi are not used by this product."
+    },
+    "taxi_zone_statistics": {
+      "product_name": "Taxi Zone Statistics",
+      "affected": true,
+      "classification": "A",
+      "refresh_strategy": "incremental",
+      "reason": "Additive count/sum/non-null-count aggregate groups are exclusively for months after the baseline.",
+      "baseline_row_count": 773,
+      "updated_row_count": 2916,
+      "affected_scope": {
+        "new_trip_rows": 659476,
+        "minimum_pickup_date": "2024-04-02",
+        "maximum_pickup_date": "2025-01-07",
+        "new_aggregate_rows": 2143,
+        "overlapping_baseline_groups": 0
+      },
+      "schema_before": [
+        {
+          "name": "month",
+          "type": "date"
+        },
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ],
+      "schema_after": [
+        {
+          "name": "month",
+          "type": "date"
+        },
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ],
+      "schema_compatible": true,
+      "incremental_refresh_time_seconds": 3.391,
+      "full_refresh_reference_time_seconds": 1.67,
+      "output_equivalent_to_full_refresh": true,
+      "equivalence_check": {
+        "missing_reference_keys": 0,
+        "unexpected_keys": 0,
+        "value_mismatches": 0
+      },
+      "baseline_delta_version": 0,
+      "updated_delta_version": 2,
+      "schema_evolution_fields_used": [],
+      "notes": "New humidity and aqi are not used by this product."
+    },
+    "weather_impact_summary": {
+      "product_name": "Weather Impact Summary",
+      "affected": true,
+      "classification": "B",
+      "refresh_strategy": "affected-partition",
+      "reason": "New trip totals are additive, while observed_hours changes by weather category for every zone; only the small zone-weather product rows are recomposed from the baseline aggregates and new-scope aggregates/exposures.",
+      "baseline_row_count": 786,
+      "updated_row_count": 786,
+      "affected_scope": {
+        "updated_zone_weather_groups": 786,
+        "new_zone_weather_trip_groups": 654,
+        "weather_categories": [
+          "dry",
+          "unknown",
+          "wet"
+        ],
+        "exposure_hours_recomputed_for_extension": true,
+        "extension_calendar_start_local_date": "2024-04-01",
+        "extension_calendar_end_local_date": "2025-01-07"
+      },
+      "schema_before": [
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        },
+        {
+          "name": "observed_hours",
+          "type": "long"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        }
+      ],
+      "schema_after": [
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        },
+        {
+          "name": "observed_hours",
+          "type": "long"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        }
+      ],
+      "schema_compatible": true,
+      "incremental_refresh_time_seconds": 10.249,
+      "full_refresh_reference_time_seconds": 4.786,
+      "output_equivalent_to_full_refresh": true,
+      "equivalence_check": {
+        "missing_reference_keys": 0,
+        "unexpected_keys": 0,
+        "value_mismatches": 0
+      },
+      "baseline_delta_version": 0,
+      "updated_delta_version": 1,
+      "schema_evolution_fields_used": [],
+      "notes": "New humidity is not used; established precipitation-derived weather categories remain the grouping field."
+    },
+    "air_quality_impact_summary": {
+      "product_name": "Air Quality Impact Summary",
+      "affected": true,
+      "classification": "B",
+      "refresh_strategy": "affected-partition",
+      "reason": "The product is hourly and appendable after the baseline calendar end; hours are recomputed only for the newly covered calendar interval.",
+      "baseline_row_count": 2183,
+      "updated_row_count": 8952,
+      "affected_scope": {
+        "hour_utc_after_baseline": true,
+        "calendar_start_local_date": "2024-04-01",
+        "calendar_end_local_date": "2025-01-07",
+        "incremental_hour_rows": 6769,
+        "overlapping_baseline_hours": 0
+      },
+      "schema_before": [
+        {
+          "name": "hour_utc",
+          "type": "timestamp"
+        },
+        {
+          "name": "local_date",
+          "type": "date"
+        },
+        {
+          "name": "weekday",
+          "type": "integer"
+        },
+        {
+          "name": "local_hour",
+          "type": "integer"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "pm25",
+          "type": "double"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        }
+      ],
+      "schema_after": [
+        {
+          "name": "hour_utc",
+          "type": "timestamp"
+        },
+        {
+          "name": "local_date",
+          "type": "date"
+        },
+        {
+          "name": "weekday",
+          "type": "integer"
+        },
+        {
+          "name": "local_hour",
+          "type": "integer"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "pm25",
+          "type": "double"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        }
+      ],
+      "schema_compatible": true,
+      "incremental_refresh_time_seconds": 3.202,
+      "full_refresh_reference_time_seconds": 2.136,
+      "output_equivalent_to_full_refresh": true,
+      "equivalence_check": {
+        "missing_reference_keys": 0,
+        "unexpected_keys": 0,
+        "value_mismatches": 0
+      },
+      "baseline_delta_version": 0,
+      "updated_delta_version": 2,
+      "schema_evolution_fields_used": [],
+      "notes": "New aqi is not used; established PM2.5 context remains in this hourly product."
+    }
+  },
+  "all_products_equivalent_to_full_refresh": true,
+  "gold_refresh_mode": "Incremental/affected-scope Delta MERGE; no product snapshot overwrite.",
+  "final_product_benchmark_performed": false
+}

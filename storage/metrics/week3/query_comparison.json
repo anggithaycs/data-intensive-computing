@@ -1,0 +1,658 @@
+{
+  "baseline_run_id": "20260925_085344_238641",
+  "baseline_integrated_delta_version": 0,
+  "updated_integrated_delta_version": 1,
+  "baseline_integrated_rows": 9394330,
+  "updated_integrated_rows": 10053806,
+  "updated_data_coverage": {
+    "first_date": "2024-01-01",
+    "last_date": "2025-01-07",
+    "trip_count": 10053806
+  },
+  "baseline_measured_repeats": 1,
+  "updated_execution_measurement": "One collect action per existing Week 2 Silver query; elapsed wall-clock time recorded in milliseconds.",
+  "queries": {
+    "monthly_zone_demand": {
+      "query_name": "monthly_zone_demand",
+      "baseline_result_rows": 773,
+      "updated_result_rows": 2916,
+      "baseline_summary": {
+        "months": [
+          "2024-01-01",
+          "2024-02-01",
+          "2024-03-01"
+        ],
+        "total_trips_across_groups": 9394330,
+        "highest_demand_zone": {
+          "month": "2024-03-01",
+          "pickup_location_id": 161,
+          "pickup_zone": "Midtown Center",
+          "pickup_borough": "Manhattan",
+          "trip_count": 160628
+        }
+      },
+      "updated_summary": {
+        "months": [
+          "2024-01-01",
+          "2024-02-01",
+          "2024-03-01",
+          "2024-04-01",
+          "2024-05-01",
+          "2024-06-01",
+          "2024-07-01",
+          "2024-08-01",
+          "2024-09-01",
+          "2024-10-01",
+          "2024-11-01",
+          "2024-12-01",
+          "2025-01-01"
+        ],
+        "total_trips_across_groups": 10053806,
+        "highest_demand_zone": {
+          "month": "2024-03-01",
+          "pickup_location_id": 161,
+          "pickup_zone": "Midtown Center",
+          "pickup_borough": "Manhattan",
+          "trip_count": 160628
+        }
+      },
+      "result_changed": true,
+      "comparison_detail": {
+        "added_group_keys": 2143,
+        "removed_group_keys": 0,
+        "modified_existing_group_keys": 0
+      },
+      "baseline_execution_ms": 599.6016670251265,
+      "updated_execution_ms": 1404.792,
+      "compatible": true,
+      "execution_status": "success",
+      "output_columns": [
+        "month",
+        "pickup_borough",
+        "pickup_location_id",
+        "pickup_zone",
+        "trip_count"
+      ],
+      "baseline_run_id": "20260925_085344_238641",
+      "updated_integrated_delta_version": 1,
+      "coverage": {
+        "baseline": "Pickup months 2024-01 through 2024-03; integrated input coverage 2024-01-01 through 2024-03-31.",
+        "updated": {
+          "first_date": "2024-01-01",
+          "last_date": "2025-01-07",
+          "trip_count": 10053806
+        }
+      },
+      "change_explanation": {
+        "based_on_logic": true,
+        "statement": "This query consumes taxi demand and/or joined context from integrated_taxi_trips. Updated rows are the newly integrated Taxi trips and their existing-logic contextual joins; no humidity or aqi column is referenced by this query."
+      },
+      "notes": "Baseline answer was read from the frozen Week 2 run; it was not rerun."
+    },
+    "weather_trip_distance": {
+      "query_name": "weather_trip_distance",
+      "baseline_result_rows": 3,
+      "updated_result_rows": 3,
+      "baseline_summary": {
+        "categories": [
+          {
+            "weather": "dry",
+            "trip_count": 7624853,
+            "distance_count": 7624853,
+            "avg_distance": 3.2700134848501716
+          },
+          {
+            "weather": "unknown",
+            "trip_count": 706969,
+            "distance_count": 706969,
+            "avg_distance": 3.2203082879164397
+          },
+          {
+            "weather": "wet",
+            "trip_count": 1062508,
+            "distance_count": 1062508,
+            "avg_distance": 2.979924744096075
+          }
+        ]
+      },
+      "updated_summary": {
+        "categories": [
+          {
+            "weather": "dry",
+            "trip_count": 8207879,
+            "distance_count": 8207879,
+            "avg_distance": 3.293284703636635
+          },
+          {
+            "weather": "unknown",
+            "trip_count": 744509,
+            "distance_count": 744509,
+            "avg_distance": 3.238655328545386
+          },
+          {
+            "weather": "wet",
+            "trip_count": 1101418,
+            "distance_count": 1101418,
+            "avg_distance": 3.00105733699652
+          }
+        ]
+      },
+      "result_changed": true,
+      "comparison_detail": {
+        "added_group_keys": 0,
+        "removed_group_keys": 0,
+        "modified_existing_group_keys": 3
+      },
+      "baseline_execution_ms": 375.137333991006,
+      "updated_execution_ms": 820.97,
+      "compatible": true,
+      "execution_status": "success",
+      "output_columns": [
+        "avg_distance",
+        "distance_count",
+        "trip_count",
+        "weather"
+      ],
+      "baseline_run_id": "20260925_085344_238641",
+      "updated_integrated_delta_version": 1,
+      "coverage": {
+        "baseline": "Integrated input coverage 2024-01-01 through 2024-03-31.",
+        "updated": {
+          "first_date": "2024-01-01",
+          "last_date": "2025-01-07",
+          "trip_count": 10053806
+        }
+      },
+      "change_explanation": {
+        "based_on_logic": true,
+        "statement": "This query consumes taxi demand and/or joined context from integrated_taxi_trips. Updated rows are the newly integrated Taxi trips and their existing-logic contextual joins; no humidity or aqi column is referenced by this query."
+      },
+      "notes": "Baseline answer was read from the frozen Week 2 run; it was not rerun."
+    },
+    "air_quality_demand": {
+      "query_name": "air_quality_demand",
+      "baseline_result_rows": 1,
+      "updated_result_rows": 1,
+      "baseline_summary": {
+        "total_hours": 2183,
+        "matched_hours": 2183,
+        "correlation": 0.06733192430826998
+      },
+      "updated_summary": {
+        "total_hours": 8952,
+        "matched_hours": 8904,
+        "correlation": -0.00886184887555488
+      },
+      "result_changed": true,
+      "comparison_detail": {
+        "added_group_keys": 0,
+        "removed_group_keys": 0,
+        "modified_existing_group_keys": 1
+      },
+      "baseline_execution_ms": 733.5902919876389,
+      "updated_execution_ms": 2236.034,
+      "compatible": true,
+      "execution_status": "success",
+      "output_columns": [
+        "correlation",
+        "matched_hours",
+        "total_hours"
+      ],
+      "baseline_run_id": "20260925_085344_238641",
+      "updated_integrated_delta_version": 1,
+      "coverage": {
+        "baseline": "Hourly series covers 2024-01-01 through 2024-03-31.",
+        "updated": {
+          "first_date": "2024-01-01",
+          "last_date": "2025-01-07",
+          "trip_count": 10053806
+        }
+      },
+      "change_explanation": {
+        "based_on_logic": true,
+        "statement": "This query consumes taxi demand and/or joined context from integrated_taxi_trips. Updated rows are the newly integrated Taxi trips and their existing-logic contextual joins; no humidity or aqi column is referenced by this query."
+      },
+      "notes": "Baseline answer was read from the frozen Week 2 run; it was not rerun."
+    },
+    "weather_demand_variation": {
+      "query_name": "weather_demand_variation",
+      "baseline_result_rows": 262,
+      "updated_result_rows": 262,
+      "baseline_summary": {
+        "ranked_zones": 262,
+        "top_five": [
+          {
+            "pickup_location_id": 138,
+            "pickup_zone": "LaGuardia Airport",
+            "demand_range": 27.53222075810251,
+            "minimum_exposure_hours": 241,
+            "demand_rank": 1
+          },
+          {
+            "pickup_location_id": 132,
+            "pickup_zone": "JFK Airport",
+            "demand_range": 24.883499682254865,
+            "minimum_exposure_hours": 241,
+            "demand_rank": 2
+          },
+          {
+            "pickup_location_id": 79,
+            "pickup_zone": "East Village",
+            "demand_range": 12.919944581510975,
+            "minimum_exposure_hours": 241,
+            "demand_rank": 3
+          },
+          {
+            "pickup_location_id": 246,
+            "pickup_zone": "West Chelsea/Hudson Yards",
+            "demand_range": 11.989446656199775,
+            "minimum_exposure_hours": 241,
+            "demand_rank": 4
+          },
+          {
+            "pickup_location_id": 142,
+            "pickup_zone": "Lincoln Square East",
+            "demand_range": 11.316051269111426,
+            "minimum_exposure_hours": 241,
+            "demand_rank": 5
+          }
+        ],
+        "minimum_rank": 256
+      },
+      "updated_summary": {
+        "ranked_zones": 262,
+        "top_five": [
+          {
+            "pickup_location_id": 236,
+            "pickup_zone": "Upper East Side North",
+            "demand_range": 31.402187332292584,
+            "minimum_exposure_hours": 636,
+            "demand_rank": 1
+          },
+          {
+            "pickup_location_id": 237,
+            "pickup_zone": "Upper East Side South",
+            "demand_range": 30.186882358258472,
+            "minimum_exposure_hours": 636,
+            "demand_rank": 2
+          },
+          {
+            "pickup_location_id": 161,
+            "pickup_zone": "Midtown Center",
+            "demand_range": 29.93478436134164,
+            "minimum_exposure_hours": 636,
+            "demand_rank": 3
+          },
+          {
+            "pickup_location_id": 162,
+            "pickup_zone": "Midtown East",
+            "demand_range": 25.16935446436642,
+            "minimum_exposure_hours": 636,
+            "demand_rank": 4
+          },
+          {
+            "pickup_location_id": 142,
+            "pickup_zone": "Lincoln Square East",
+            "demand_range": 24.785599984364275,
+            "minimum_exposure_hours": 636,
+            "demand_rank": 5
+          }
+        ],
+        "minimum_rank": 256
+      },
+      "result_changed": true,
+      "comparison_detail": {
+        "added_group_keys": 0,
+        "removed_group_keys": 0,
+        "modified_existing_group_keys": 262
+      },
+      "baseline_execution_ms": 2185.7472500414588,
+      "updated_execution_ms": 3480.779,
+      "compatible": true,
+      "execution_status": "success",
+      "output_columns": [
+        "demand_range",
+        "demand_rank",
+        "minimum_exposure_hours",
+        "pickup_location_id",
+        "pickup_zone"
+      ],
+      "baseline_run_id": "20260925_085344_238641",
+      "updated_integrated_delta_version": 1,
+      "coverage": {
+        "baseline": "Dry and wet exposure across the integrated input period 2024-01-01 through 2024-03-31.",
+        "updated": {
+          "first_date": "2024-01-01",
+          "last_date": "2025-01-07",
+          "trip_count": 10053806
+        }
+      },
+      "change_explanation": {
+        "based_on_logic": true,
+        "statement": "This query consumes taxi demand and/or joined context from integrated_taxi_trips. Updated rows are the newly integrated Taxi trips and their existing-logic contextual joins; no humidity or aqi column is referenced by this query."
+      },
+      "notes": "Baseline answer was read from the frozen Week 2 run; it was not rerun."
+    },
+    "weekday_peak_hours": {
+      "query_name": "weekday_peak_hours",
+      "baseline_result_rows": 168,
+      "updated_result_rows": 168,
+      "baseline_summary": {
+        "weekday_groups": 7,
+        "rank_one_hours": [
+          {
+            "weekday": 1,
+            "local_hour": 18,
+            "hour_occurrences": 13,
+            "avg_demand": 6175.615384615385,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 2,
+            "local_hour": 18,
+            "hour_occurrences": 13,
+            "avg_demand": 7648.153846153846,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 3,
+            "local_hour": 18,
+            "hour_occurrences": 13,
+            "avg_demand": 8516.461538461539,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 4,
+            "local_hour": 18,
+            "hour_occurrences": 13,
+            "avg_demand": 9148.76923076923,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 5,
+            "local_hour": 18,
+            "hour_occurrences": 13,
+            "avg_demand": 7903.461538461538,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 6,
+            "local_hour": 19,
+            "hour_occurrences": 13,
+            "avg_demand": 7404.615384615385,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 7,
+            "local_hour": 0,
+            "hour_occurrences": 13,
+            "avg_demand": 6107.076923076923,
+            "demand_rank": 1
+          }
+        ],
+        "result_rows": 168
+      },
+      "updated_summary": {
+        "weekday_groups": 7,
+        "rank_one_hours": [
+          {
+            "weekday": 1,
+            "local_hour": 18,
+            "hour_occurrences": 54,
+            "avg_demand": 1556.8703703703704,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 2,
+            "local_hour": 18,
+            "hour_occurrences": 54,
+            "avg_demand": 1915.7037037037037,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 3,
+            "local_hour": 18,
+            "hour_occurrences": 53,
+            "avg_demand": 2161.3396226415093,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 4,
+            "local_hour": 18,
+            "hour_occurrences": 53,
+            "avg_demand": 2318.9056603773583,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 5,
+            "local_hour": 18,
+            "hour_occurrences": 53,
+            "avg_demand": 2011.1509433962265,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 6,
+            "local_hour": 19,
+            "hour_occurrences": 53,
+            "avg_demand": 1890.622641509434,
+            "demand_rank": 1
+          },
+          {
+            "weekday": 7,
+            "local_hour": 0,
+            "hour_occurrences": 53,
+            "avg_demand": 1570.9245283018868,
+            "demand_rank": 1
+          }
+        ],
+        "result_rows": 168
+      },
+      "result_changed": true,
+      "comparison_detail": {
+        "added_group_keys": 0,
+        "removed_group_keys": 0,
+        "modified_existing_group_keys": 168
+      },
+      "baseline_execution_ms": 796.8997919815592,
+      "updated_execution_ms": 1292.95,
+      "compatible": true,
+      "execution_status": "success",
+      "output_columns": [
+        "avg_demand",
+        "demand_rank",
+        "hour_occurrences",
+        "local_hour",
+        "weekday"
+      ],
+      "baseline_run_id": "20260925_085344_238641",
+      "updated_integrated_delta_version": 1,
+      "coverage": {
+        "baseline": "Calendar hours span the integrated input period 2024-01-01 through 2024-03-31 in local New York time.",
+        "updated": {
+          "first_date": "2024-01-01",
+          "last_date": "2025-01-07",
+          "trip_count": 10053806
+        }
+      },
+      "change_explanation": {
+        "based_on_logic": true,
+        "statement": "This query consumes taxi demand and/or joined context from integrated_taxi_trips. Updated rows are the newly integrated Taxi trips and their existing-logic contextual joins; no humidity or aqi column is referenced by this query."
+      },
+      "notes": "Baseline answer was read from the frozen Week 2 run; it was not rerun."
+    },
+    "monthly_demand_trends": {
+      "query_name": "monthly_demand_trends",
+      "baseline_result_rows": 3,
+      "updated_result_rows": 13,
+      "baseline_summary": {
+        "months": [
+          {
+            "month": "2024-01-01",
+            "observed_days": 31,
+            "trip_count": 2919226,
+            "previous_month_trips": null,
+            "avg_daily_demand": 94168.58064516129,
+            "change_pct": null
+          },
+          {
+            "month": "2024-02-01",
+            "observed_days": 29,
+            "trip_count": 2959815,
+            "previous_month_trips": 2919226,
+            "avg_daily_demand": 102062.58620689655,
+            "change_pct": 1.3904027985500267
+          },
+          {
+            "month": "2024-03-01",
+            "observed_days": 31,
+            "trip_count": 3515289,
+            "previous_month_trips": 2959815,
+            "avg_daily_demand": 113396.41935483871,
+            "change_pct": 18.76718646266743
+          }
+        ]
+      },
+      "updated_summary": {
+        "months": [
+          {
+            "month": "2024-01-01",
+            "observed_days": 31,
+            "trip_count": 2919226,
+            "previous_month_trips": null,
+            "avg_daily_demand": 94168.58064516129,
+            "change_pct": null
+          },
+          {
+            "month": "2024-02-01",
+            "observed_days": 29,
+            "trip_count": 2959815,
+            "previous_month_trips": 2919226,
+            "avg_daily_demand": 102062.58620689655,
+            "change_pct": 1.3904027985500267
+          },
+          {
+            "month": "2024-03-01",
+            "observed_days": 31,
+            "trip_count": 3515289,
+            "previous_month_trips": 2959815,
+            "avg_daily_demand": 113396.41935483871,
+            "change_pct": 18.76718646266743
+          },
+          {
+            "month": "2024-04-01",
+            "observed_days": 30,
+            "trip_count": 66152,
+            "previous_month_trips": 3515289,
+            "avg_daily_demand": 2205.0666666666666,
+            "change_pct": -98.11816325770086
+          },
+          {
+            "month": "2024-05-01",
+            "observed_days": 31,
+            "trip_count": 72778,
+            "previous_month_trips": 66152,
+            "avg_daily_demand": 2347.6774193548385,
+            "change_pct": 10.016326037005683
+          },
+          {
+            "month": "2024-06-01",
+            "observed_days": 30,
+            "trip_count": 70794,
+            "previous_month_trips": 72778,
+            "avg_daily_demand": 2359.8,
+            "change_pct": -2.726098546263981
+          },
+          {
+            "month": "2024-07-01",
+            "observed_days": 31,
+            "trip_count": 73028,
+            "previous_month_trips": 70794,
+            "avg_daily_demand": 2355.7419354838707,
+            "change_pct": 3.155634658304376
+          },
+          {
+            "month": "2024-08-01",
+            "observed_days": 31,
+            "trip_count": 73081,
+            "previous_month_trips": 73028,
+            "avg_daily_demand": 2357.451612903226,
+            "change_pct": 0.07257490277701703
+          },
+          {
+            "month": "2024-09-01",
+            "observed_days": 30,
+            "trip_count": 70365,
+            "previous_month_trips": 73081,
+            "avg_daily_demand": 2345.5,
+            "change_pct": -3.7164242415949427
+          },
+          {
+            "month": "2024-10-01",
+            "observed_days": 31,
+            "trip_count": 73025,
+            "previous_month_trips": 70365,
+            "avg_daily_demand": 2355.6451612903224,
+            "change_pct": 3.7802884957009875
+          },
+          {
+            "month": "2024-11-01",
+            "observed_days": 30,
+            "trip_count": 70896,
+            "previous_month_trips": 73025,
+            "avg_daily_demand": 2363.2,
+            "change_pct": -2.9154399178363577
+          },
+          {
+            "month": "2024-12-01",
+            "observed_days": 31,
+            "trip_count": 72822,
+            "previous_month_trips": 70896,
+            "avg_daily_demand": 2349.0967741935483,
+            "change_pct": 2.71665538253216
+          },
+          {
+            "month": "2025-01-01",
+            "observed_days": 7,
+            "trip_count": 16535,
+            "previous_month_trips": 72822,
+            "avg_daily_demand": 2362.1428571428573,
+            "change_pct": -77.29394963060614
+          }
+        ]
+      },
+      "result_changed": true,
+      "comparison_detail": {
+        "added_group_keys": 10,
+        "removed_group_keys": 0,
+        "modified_existing_group_keys": 0
+      },
+      "baseline_execution_ms": 836.1140000051819,
+      "updated_execution_ms": 1136.901,
+      "compatible": true,
+      "execution_status": "success",
+      "output_columns": [
+        "avg_daily_demand",
+        "change_pct",
+        "month",
+        "observed_days",
+        "previous_month_trips",
+        "trip_count"
+      ],
+      "baseline_run_id": "20260925_085344_238641",
+      "updated_integrated_delta_version": 1,
+      "coverage": {
+        "baseline": "Monthly results cover January through March 2024; trend comparisons use the previous month when available.",
+        "updated": {
+          "first_date": "2024-01-01",
+          "last_date": "2025-01-07",
+          "trip_count": 10053806
+        }
+      },
+      "change_explanation": {
+        "based_on_logic": true,
+        "statement": "This query consumes taxi demand and/or joined context from integrated_taxi_trips. Updated rows are the newly integrated Taxi trips and their existing-logic contextual joins; no humidity or aqi column is referenced by this query."
+      },
+      "notes": "Baseline answer was read from the frozen Week 2 run; it was not rerun."
+    }
+  }
+}

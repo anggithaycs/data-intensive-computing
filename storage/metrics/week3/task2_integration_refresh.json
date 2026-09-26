@@ -1,0 +1,134 @@
+{
+  "baseline": {
+    "source_evidence": "storage/metrics/week3/task2_baseline.json",
+    "table": "storage/delta/silver/integrated_taxi_trips",
+    "delta_version_before": 0,
+    "row_count": 9394330,
+    "schema_version": null,
+    "schema_version_unavailable_reason": "The integrated Delta transaction metadata has no application schema-version field.",
+    "pickup_date_range": {
+      "min": "2024-01-01",
+      "max": "2024-03-31"
+    },
+    "pickup_timestamp_bounds": {
+      "min_pickup_local_datetime": "2024-01-01 01:00:00",
+      "max_pickup_local_datetime": "2025-01-08 00:56:06",
+      "min_pickup_datetime": "2024-01-01 06:00:00",
+      "max_pickup_datetime": "2025-01-08 05:56:06",
+      "min_pickup_date": "2024-01-01",
+      "max_pickup_date": "2025-01-07"
+    },
+    "partition_columns": [
+      "pickup_year",
+      "pickup_month"
+    ]
+  },
+  "incremental_scope": {
+    "business_key": "trip_id",
+    "scope_method": "Left anti-join current clean Taxi Silver against integrated baseline trip_id.",
+    "clean_taxi_rows": 10053806,
+    "new_taxi_candidates": 659476,
+    "new_integrated_rows": 659476,
+    "pickup_bounds": {
+      "min_pickup_date": "2024-04-02",
+      "max_pickup_date": "2025-01-07",
+      "min_pickup_local_datetime": "2024-04-02 20:10:04",
+      "max_pickup_local_datetime": "2025-01-08 00:56:06",
+      "min_pickup_datetime": "2024-04-03 00:10:04",
+      "max_pickup_datetime": "2025-01-08 05:56:06"
+    },
+    "duplicate_trip_ids_ignored": 0,
+    "rejected_or_unsupported_rows": 0
+  },
+  "context_coverage": {
+    "match_definition": {
+      "weather": "Existing integration pipeline matched a containing UTC pickup/dropoff hour exactly.",
+      "air_quality": "Existing integration pipeline used exact UTC hour and borough PM2.5 with citywide fallback.",
+      "zones": "Existing integration pipeline left-joined pickup/dropoff location IDs to the zone lookup."
+    },
+    "pickup_weather_matched": 659007,
+    "pickup_air_quality_matched": 659007,
+    "pickup_air_quality_missing": 469,
+    "pickup_unknown_zone": 0,
+    "pickup_unknown_borough": 2557,
+    "dropoff_weather_matched": 659004,
+    "dropoff_air_quality_matched": 659004,
+    "dropoff_air_quality_missing": 472,
+    "dropoff_unknown_zone": 0,
+    "dropoff_unknown_borough": 3931,
+    "task1_weather_window_source": {
+      "rows": 168,
+      "distinct_timestamps": 168,
+      "min_timestamp": "2025-01-01 02:00:00",
+      "max_timestamp": "2025-01-08 01:00:00"
+    },
+    "task1_air_quality_window_source": {
+      "rows": 1008,
+      "distinct_timestamps": 168,
+      "min_timestamp": "2025-01-01 02:00:00",
+      "max_timestamp": "2025-01-08 01:00:00"
+    }
+  },
+  "schema_evolution": {
+    "integrated_schema_version_before": null,
+    "integrated_schema_version_after": null,
+    "schema_version_unavailable_reason": "The integrated Delta transaction metadata has no application schema-version field.",
+    "delta_schema_changes": [],
+    "task1_humidity_propagated": false,
+    "task1_aqi_propagated": false,
+    "decision": "Keep humidity and aqi in their Silver source tables. Existing integration projects established relative_humidity_pct into *_humidity_pct and measurement-derived PM2.5 into *_pm25; Week 2 queries do not depend on the new fields. The integrated schema remains unchanged."
+  },
+  "execution": {
+    "operation": "Delta MERGE, insert-only on trip_id",
+    "delta_merge_version": 1,
+    "delta_version_before": 0,
+    "delta_version_after": 1,
+    "baseline_rows": 9394330,
+    "inserted_rows": 659476,
+    "final_rows": 10053806,
+    "execution_seconds": 344.928,
+    "status": "success"
+  },
+  "correctness_checks": {
+    "new_records_selected_by_trip_id_anti_join": true,
+    "new_taxi_trip_ids_unique_and_non_null": true,
+    "all_new_taxi_candidates_integrated": true,
+    "final_count_equals_baseline_plus_inserted": true,
+    "inserted_ids_present_after_merge": true,
+    "duplicate_rows_ignored": true,
+    "baseline_rows_unchanged": true,
+    "no_duplicate_integrated_trip_ids": true,
+    "existing_join_semantics_reused": true,
+    "source_silver_delta_versions_unchanged": true,
+    "week2_gold_products_untouched": true,
+    "integrated_schema_unchanged": true,
+    "snapshot_overwrite_used": false,
+    "delta_merge_present_in_history": true,
+    "task1_raw_files_read_or_modified": false,
+    "source_silver_versions_before": {
+      "taxi": 1,
+      "weather": 2,
+      "air_quality": 2,
+      "zones": 0
+    },
+    "source_silver_versions_after": {
+      "taxi": 1,
+      "weather": 2,
+      "air_quality": 2,
+      "zones": 0
+    },
+    "week2_gold_versions_before": {
+      "daily_mobility_summary": 0,
+      "taxi_zone_statistics": 0,
+      "weather_impact_summary": 0,
+      "air_quality_impact_summary": 0
+    },
+    "week2_gold_versions_after": {
+      "daily_mobility_summary": 0,
+      "taxi_zone_statistics": 0,
+      "weather_impact_summary": 0,
+      "air_quality_impact_summary": 0
+    }
+  },
+  "created_at_utc": "2026-09-26T14:06:07.783738+00:00"
+}

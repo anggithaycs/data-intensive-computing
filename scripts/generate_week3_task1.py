@@ -41,6 +41,31 @@ def bounds(df: DataFrame, column: str) -> tuple[object, object]:
     return row.minimum, row.maximum
 
 
+def taxi_business_key(df: DataFrame) -> DataFrame:
+    pickup = F.to_utc_timestamp(
+        F.col("tpep_pickup_datetime"), "America/New_York"
+    ).cast("string")
+    dropoff = F.to_utc_timestamp(
+        F.col("tpep_dropoff_datetime"), "America/New_York"
+    ).cast("string")
+    return df.withColumn(
+        "_trip_id",
+        F.sha2(
+            F.concat_ws(
+                "||",
+                F.coalesce(F.col("VendorID").cast("string"), F.lit("")),
+                pickup,
+                dropoff,
+                F.coalesce(F.col("PULocationID").cast("string"), F.lit("")),
+                F.coalesce(F.col("DOLocationID").cast("string"), F.lit("")),
+                F.coalesce(F.col("fare_amount").cast("string"), F.lit("")),
+                F.coalesce(F.col("trip_distance").cast("string"), F.lit("")),
+            ),
+            256,
+        ),
+    )
+
+
 def write_csv_rows(path: Path, columns: list[str], rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -57,10 +82,7 @@ def taxi_update(spark: SparkSession) -> tuple[dict, DataFrame]:
     source_max_pickup = source.select(F.max("tpep_pickup_datetime")).first()[0]
     source_max_dropoff = source.select(F.max("tpep_dropoff_datetime")).first()[0]
     source_max = max(source_max_pickup, source_max_dropoff)
-    release_start = max(
-        RELEASE_START,
-        source_max + timedelta(seconds=1),
-    )
+    release_start = source_max + timedelta(seconds=1)
     release_end = RELEASE_END
     if release_start >= release_end:
         raise ValueError("Taxi source maximum is outside the simulated release window")
@@ -114,13 +136,23 @@ def taxi_update(spark: SparkSession) -> tuple[dict, DataFrame]:
     update_count = update.count()
     new_pickup_min, new_pickup_max = bounds(new_rows, "tpep_pickup_datetime")
     new_dropoff_min, new_dropoff_max = bounds(new_rows, "tpep_dropoff_datetime")
-    duplicate_matches = update.filter(
-        F.col("tpep_pickup_datetime") <= F.lit(source_max)
-    ).count()
+    source_keys = taxi_business_key(source).select("_trip_id").distinct()
+    update_keys = taxi_business_key(update)
+    duplicate_matches = (
+        update_keys.join(source_keys, "_trip_id", "left_semi").count()
+    )
+    new_key_count = (
+        update_keys.join(source_keys, "_trip_id", "left_anti")
+        .select("_trip_id")
+        .distinct()
+        .count()
+    )
     if update_count != new_count + duplicate_count:
         raise ValueError("Taxi update row count is incorrect")
     if duplicate_matches != duplicate_count:
         raise ValueError("Taxi duplicate count is incorrect")
+    if new_key_count != new_count:
+        raise ValueError("Taxi new trip_id count is incorrect")
     if update.schema != source.schema:
         raise ValueError("Taxi update schema does not match the source schema")
 
@@ -130,6 +162,8 @@ def taxi_update(spark: SparkSession) -> tuple[dict, DataFrame]:
             "update_rows": update_count,
             "new_rows": new_count,
             "duplicate_rows": duplicate_matches,
+            "new_trip_ids": new_key_count,
+            "duplicate_trip_ids": duplicate_matches,
             "rejected_rows": 0,
             "earliest_update_timestamp": new_pickup_min.isoformat(),
             "latest_update_timestamp": new_dropoff_max.isoformat(),

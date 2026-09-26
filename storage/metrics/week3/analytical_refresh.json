@@ -1,0 +1,597 @@
+{
+  "benchmark_timestamp_utc": "2026-09-26T14:23:31.853513+00:00",
+  "integrated_delta_version": 1,
+  "integrated_row_count": 10053806,
+  "methodology": "For each product, execute the unchanged Week 2 SQL/views over the current integrated Delta snapshot; apply the Week 2 builder's coalesce(1), Delta overwriteSchema write to an isolated staging path. Full-refresh timing covers SQL plan construction and the materializing Delta write, matching the Week 2 builder's timer. Staged output row counts, schemas, business keys, and aggregate values are validated against the live Step 5 Gold Delta output. The post-write row-count and equivalence validation are excluded from full-refresh timing.",
+  "incremental_baseline_source": "storage/metrics/week3/product_comparison.json",
+  "staging_root": "/Users/anggitha/data-intensive-computing/data-intensive-computing/storage/tmp/week3/task2_full_refresh_20260926T142310605570Z",
+  "live_gold_before": {
+    "daily_mobility_summary": {
+      "delta_version": 2,
+      "row_count": 2440,
+      "schema": [
+        {
+          "name": "pickup_date",
+          "type": "date"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "duration_sum",
+          "type": "double"
+        },
+        {
+          "name": "duration_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ]
+    },
+    "taxi_zone_statistics": {
+      "delta_version": 2,
+      "row_count": 2916,
+      "schema": [
+        {
+          "name": "month",
+          "type": "date"
+        },
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ]
+    },
+    "weather_impact_summary": {
+      "delta_version": 1,
+      "row_count": 786,
+      "schema": [
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        },
+        {
+          "name": "observed_hours",
+          "type": "long"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        }
+      ]
+    },
+    "air_quality_impact_summary": {
+      "delta_version": 2,
+      "row_count": 8952,
+      "schema": [
+        {
+          "name": "hour_utc",
+          "type": "timestamp"
+        },
+        {
+          "name": "local_date",
+          "type": "date"
+        },
+        {
+          "name": "weekday",
+          "type": "integer"
+        },
+        {
+          "name": "local_hour",
+          "type": "integer"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "pm25",
+          "type": "double"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "live_gold_after_unchanged": {
+    "daily_mobility_summary": {
+      "delta_version": 2,
+      "row_count": 2440,
+      "schema": [
+        {
+          "name": "pickup_date",
+          "type": "date"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "duration_sum",
+          "type": "double"
+        },
+        {
+          "name": "duration_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ]
+    },
+    "taxi_zone_statistics": {
+      "delta_version": 2,
+      "row_count": 2916,
+      "schema": [
+        {
+          "name": "month",
+          "type": "date"
+        },
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ]
+    },
+    "weather_impact_summary": {
+      "delta_version": 1,
+      "row_count": 786,
+      "schema": [
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        },
+        {
+          "name": "observed_hours",
+          "type": "long"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        }
+      ]
+    },
+    "air_quality_impact_summary": {
+      "delta_version": 2,
+      "row_count": 8952,
+      "schema": [
+        {
+          "name": "hour_utc",
+          "type": "timestamp"
+        },
+        {
+          "name": "local_date",
+          "type": "date"
+        },
+        {
+          "name": "weekday",
+          "type": "integer"
+        },
+        {
+          "name": "local_hour",
+          "type": "integer"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "pm25",
+          "type": "double"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "products": {
+    "daily_mobility_summary": {
+      "incremental_seconds": 4.225,
+      "full_refresh_seconds": 3.092007,
+      "refresh_savings": -0.366427,
+      "speedup": 0.731836,
+      "equivalent": true,
+      "incremental_scope": {
+        "new_trip_rows": 659476,
+        "minimum_pickup_date": "2024-04-02",
+        "maximum_pickup_date": "2025-01-07",
+        "new_aggregate_rows": 1726,
+        "overlapping_baseline_groups": 0
+      },
+      "full_scope": {
+        "source": "integrated_taxi_trips",
+        "integrated_delta_version": 1,
+        "source_rows": 10053806,
+        "pickup_date_range": {
+          "start": "2024-01-01",
+          "end": "2025-01-07"
+        },
+        "grouping_keys": [
+          "pickup_date",
+          "pickup_borough"
+        ]
+      },
+      "row_count": 2440,
+      "schema": [
+        {
+          "name": "pickup_date",
+          "type": "date"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "duration_sum",
+          "type": "double"
+        },
+        {
+          "name": "duration_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ],
+      "correctness": {
+        "missing_keys": 0,
+        "unexpected_keys": 0,
+        "value_mismatches": 0
+      },
+      "temporary_output_path": "/Users/anggitha/data-intensive-computing/data-intensive-computing/storage/tmp/week3/task2_full_refresh_20260926T142310605570Z/daily_mobility_summary"
+    },
+    "taxi_zone_statistics": {
+      "incremental_seconds": 3.391,
+      "full_refresh_seconds": 2.064224,
+      "refresh_savings": -0.642748,
+      "speedup": 0.608736,
+      "equivalent": true,
+      "incremental_scope": {
+        "new_trip_rows": 659476,
+        "minimum_pickup_date": "2024-04-02",
+        "maximum_pickup_date": "2025-01-07",
+        "new_aggregate_rows": 2143,
+        "overlapping_baseline_groups": 0
+      },
+      "full_scope": {
+        "source": "integrated_taxi_trips",
+        "integrated_delta_version": 1,
+        "source_rows": 10053806,
+        "pickup_date_range": {
+          "start": "2024-01-01",
+          "end": "2025-01-07"
+        },
+        "grouping_keys": [
+          "month",
+          "pickup_location_id"
+        ]
+      },
+      "row_count": 2916,
+      "schema": [
+        {
+          "name": "month",
+          "type": "date"
+        },
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "pickup_borough",
+          "type": "string"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        },
+        {
+          "name": "fare_sum",
+          "type": "double"
+        },
+        {
+          "name": "fare_count",
+          "type": "long"
+        }
+      ],
+      "correctness": {
+        "missing_keys": 0,
+        "unexpected_keys": 0,
+        "value_mismatches": 0
+      },
+      "temporary_output_path": "/Users/anggitha/data-intensive-computing/data-intensive-computing/storage/tmp/week3/task2_full_refresh_20260926T142310605570Z/taxi_zone_statistics"
+    },
+    "weather_impact_summary": {
+      "incremental_seconds": 10.249,
+      "full_refresh_seconds": 4.35066,
+      "refresh_savings": -1.355734,
+      "speedup": 0.424496,
+      "equivalent": true,
+      "incremental_scope": {
+        "updated_zone_weather_groups": 786,
+        "new_zone_weather_trip_groups": 654,
+        "weather_categories": [
+          "dry",
+          "unknown",
+          "wet"
+        ],
+        "exposure_hours_recomputed_for_extension": true,
+        "extension_calendar_start_local_date": "2024-04-01",
+        "extension_calendar_end_local_date": "2025-01-07"
+      },
+      "full_scope": {
+        "source": "integrated_taxi_trips",
+        "integrated_delta_version": 1,
+        "source_rows": 10053806,
+        "pickup_date_range": {
+          "start": "2024-01-01",
+          "end": "2025-01-07"
+        },
+        "grouping_keys": [
+          "pickup_location_id",
+          "pickup_zone",
+          "weather"
+        ]
+      },
+      "row_count": 786,
+      "schema": [
+        {
+          "name": "pickup_location_id",
+          "type": "integer"
+        },
+        {
+          "name": "pickup_zone",
+          "type": "string"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        },
+        {
+          "name": "observed_hours",
+          "type": "long"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "distance_sum",
+          "type": "double"
+        },
+        {
+          "name": "distance_count",
+          "type": "long"
+        }
+      ],
+      "correctness": {
+        "missing_keys": 0,
+        "unexpected_keys": 0,
+        "value_mismatches": 0
+      },
+      "temporary_output_path": "/Users/anggitha/data-intensive-computing/data-intensive-computing/storage/tmp/week3/task2_full_refresh_20260926T142310605570Z/weather_impact_summary"
+    },
+    "air_quality_impact_summary": {
+      "incremental_seconds": 3.202,
+      "full_refresh_seconds": 3.114062,
+      "refresh_savings": -0.028239,
+      "speedup": 0.972536,
+      "equivalent": true,
+      "incremental_scope": {
+        "hour_utc_after_baseline": true,
+        "calendar_start_local_date": "2024-04-01",
+        "calendar_end_local_date": "2025-01-07",
+        "incremental_hour_rows": 6769,
+        "overlapping_baseline_hours": 0
+      },
+      "full_scope": {
+        "source": "integrated_taxi_trips",
+        "integrated_delta_version": 1,
+        "source_rows": 10053806,
+        "pickup_date_range": {
+          "start": "2024-01-01",
+          "end": "2025-01-07"
+        },
+        "grouping_keys": [
+          "hour_utc"
+        ]
+      },
+      "row_count": 8952,
+      "schema": [
+        {
+          "name": "hour_utc",
+          "type": "timestamp"
+        },
+        {
+          "name": "local_date",
+          "type": "date"
+        },
+        {
+          "name": "weekday",
+          "type": "integer"
+        },
+        {
+          "name": "local_hour",
+          "type": "integer"
+        },
+        {
+          "name": "trip_count",
+          "type": "long"
+        },
+        {
+          "name": "pm25",
+          "type": "double"
+        },
+        {
+          "name": "weather",
+          "type": "string"
+        }
+      ],
+      "correctness": {
+        "missing_keys": 0,
+        "unexpected_keys": 0,
+        "value_mismatches": 0
+      },
+      "temporary_output_path": "/Users/anggitha/data-intensive-computing/data-intensive-computing/storage/tmp/week3/task2_full_refresh_20260926T142310605570Z/air_quality_impact_summary"
+    }
+  },
+  "all_products_equivalent": true,
+  "temporary_outputs_cleaned": true
+}
